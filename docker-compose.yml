@@ -1,0 +1,10 @@
+version: '3.3'
+services:
+  psql_db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_DB=tinytown_app
+      - POSTGRES_USER=tinytown
+      - POSTGRES_PASSWORD=tinytown
+    ports:
+      - "5432:5432"
