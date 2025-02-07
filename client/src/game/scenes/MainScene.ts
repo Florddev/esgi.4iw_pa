@@ -2,6 +2,8 @@ import { Scene } from 'phaser'
 import { Player } from '../objects/Player'
 import { Tree } from '../objects/Tree';
 import { DialogService } from '../services/DialogService';
+import { BuildingPreview } from '../objects/BuildingPreview';
+import { Building } from '../objects/Building';
 
 interface LayerConfig {
   layer: Phaser.Tilemaps.TilemapLayer;
@@ -10,6 +12,8 @@ interface LayerConfig {
 }
 
 export class MainScene extends Scene {
+  private STORAGE_KEY = 'BUILDINGS_STORAGE';
+
   private player!: Player
   // private interactionZones: InteractionZone[] = []
   private map!: Phaser.Tilemaps.Tilemap
@@ -20,6 +24,9 @@ export class MainScene extends Scene {
   private dialogService!: DialogService;
   private targetWood: number = 5;
   private hasShownCompletionDialog: boolean = false;
+  private buildingPreview: BuildingPreview | null = null;
+  private selectedBuildingType: string | null = null;
+  private buildings: Building[] = [];
 
   constructor() {
     super({ key: 'MainScene' })
@@ -40,22 +47,24 @@ export class MainScene extends Scene {
       frameHeight: 64
     });
     this.load.spritesheet('leaves-hit', 'sprites/leaves-hit.png', {
-        frameWidth: 64, 
-        frameHeight: 32
+      frameWidth: 64,
+      frameHeight: 32
     });
     this.load.spritesheet('tree', 'sprites/tree.png', {
       frameWidth: 32,
       frameHeight: 34
     });
     this.load.spritesheet('health-bar', 'ui/health-bar.png', {
-        frameWidth: 21, 
-        frameHeight: 13
+      frameWidth: 21,
+      frameHeight: 13
     });
     this.load.image('tiles', 'tilesets/tileset.png')
     this.load.tilemapTiledJSON('map', 'maps/map.json')
     this.load.image('action-button', 'ui/action-button.png')
     this.load.image('cursor', 'ui/cursor.png')
     this.load.image('cursor-chopping', 'ui/cursor-chopping.png')
+    this.load.image('house', 'buildings/house.png');
+    this.load.image('sawmill', 'buildings/sawmill.png');
   }
 
   create() {
@@ -89,7 +98,7 @@ export class MainScene extends Scene {
           .setDepth(100000)
           .setScale(2.5)
           .setOrigin(0, 0);
-        
+
         this.hoverCursor = this.add.image(0, 0, 'cursor-chopping')
           .setDepth(100000)
           .setScale(2.5)
@@ -190,6 +199,34 @@ export class MainScene extends Scene {
 
     // Écouter l'événement d'ajout de bois
     this.events.on('addWood', this.addWood, this)
+    this.initializeBuildingSystem();
+
+    // Démarrer la scène UI des bâtiments
+    this.scene.launch('BuildingUI');
+
+    // Dans la méthode create() de MainScene
+    if (process.env.NODE_ENV === 'development') {
+      this.mapLayers.forEach((config, name) => {
+        if (config.hasCollision) {
+          const layer = this.map.getLayer(name).tilemapLayer;
+          const debugGraphics = this.add.graphics().setAlpha(0.75);
+          layer.renderDebug(debugGraphics, {
+            tileColor: null,
+            collidingTileColor: new Phaser.Display.Color(243, 134, 48, 255),
+            faceColor: new Phaser.Display.Color(40, 39, 37, 255)
+          });
+        }
+      });
+    }
+
+    if(sessionStorage.getItem(this.STORAGE_KEY)){
+      let savedBuildings = JSON.parse(sessionStorage.getItem(this.STORAGE_KEY) ?? '');
+      savedBuildings.forEach(build => {
+        const building = new Building(this, build.x, build.y, build.type);
+        this.buildings.push(building);
+      }); 
+    }
+
   }
 
   private spawnTreesFromObjectLayer(): void {
@@ -228,6 +265,130 @@ export class MainScene extends Scene {
       }
     })
   }
+
+  private initializeBuildingSystem(): void {
+    // Écouter les événements de sélection de bâtiment
+    this.game.events.on('selectBuilding', this.onBuildingSelected, this);
+    
+    // Gérer le mouvement de la souris pour l'aperçu
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+        if (this.buildingPreview) {
+            const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+            this.buildingPreview.updatePosition(worldPoint.x, worldPoint.y);
+            this.checkPlacementValidity(worldPoint);
+        }
+    });
+    
+    // Gérer le clic pour placer le bâtiment
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+        if (this.buildingPreview && this.buildingPreview.isValidPlacement()) {
+            this.placeBuilding(pointer);
+        }
+    });
+}
+
+private onBuildingSelected(buildingType: string): void {
+    this.selectedBuildingType = buildingType;
+    
+    // Supprimer l'ancien aperçu s'il existe
+    if (this.buildingPreview) {
+        this.buildingPreview.destroy();
+    }
+    
+    // Créer un nouvel aperçu
+    this.buildingPreview = new BuildingPreview(this, buildingType);
+    
+    // Masquer temporairement le curseur normal
+    if (this.uiScene) {
+        this.uiScene.defaultCursor.setVisible(false);
+        this.uiScene.hoverCursor.setVisible(false);
+    }
+}
+
+private checkPlacementValidity(worldPoint: Phaser.Math.Vector2): void {
+  if (!this.buildingPreview || !this.map) return;
+
+  const tileX = Math.floor(worldPoint.x / 16);
+  const tileY = Math.floor(worldPoint.y / 16);
+  
+  // Obtenir les dimensions du bâtiment en tiles
+  const { tilesWidth, tilesHeight } = this.buildingPreview.getDimensions();
+  
+  let isValid = true;
+  
+  // Vérifier toutes les tuiles que le bâtiment va occuper
+  for (let x = 0; x < tilesWidth; x++) {
+      for (let y = 0; y < tilesHeight; y++) {
+          const currentTileX = tileX + x;
+          const currentTileY = tileY + y;
+          
+          // Vérifier les collisions sur tous les layers
+          for (const [_, config] of this.mapLayers.entries()) {
+              if (config.hasCollision) {
+                  const tile = config.layer.getTileAt(currentTileX, currentTileY);
+                  if (tile && tile.properties && tile.properties.collides) {
+                      isValid = false;
+                      break;
+                  }
+              }
+          }
+          
+          // Vérifier les bâtiments existants
+          const hasBuildingHere = this.buildings.some(building => {
+              const buildingTileX = Math.floor(building.x / 16);
+              const buildingTileY = Math.floor(building.y / 16);
+              const buildingDimensions = building.getDimensions();
+              
+              return currentTileX >= buildingTileX && 
+                     currentTileX < buildingTileX + buildingDimensions.tilesWidth &&
+                     currentTileY >= buildingTileY && 
+                     currentTileY < buildingTileY + buildingDimensions.tilesHeight;
+          });
+          
+          if (hasBuildingHere) {
+              isValid = false;
+              break;
+          }
+      }
+      
+      if (!isValid) break;
+  }
+  
+  this.buildingPreview.setValidPlacement(isValid);
+}
+
+private placeBuilding(pointer: Phaser.Input.Pointer): void {
+  if (!this.buildingPreview || !this.selectedBuildingType) return;
+  
+  if (this.buildingPreview.isValidPlacement()) {
+      const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+      const snappedX = Math.floor(worldPoint.x / 16) * 16;
+      const snappedY = Math.floor(worldPoint.y / 16) * 16;
+      
+      // Créer le bâtiment permanent
+      const building = new Building(this, snappedX, snappedY, this.selectedBuildingType);
+      this.buildings.push(building);
+      
+      // Réinitialiser l'aperçu et la sélection
+      this.buildingPreview.destroy();
+      this.buildingPreview = null;
+      this.selectedBuildingType = null;
+      
+      // Sauvegarder les bâtiments
+      const buildingsData = this.buildings.map(b => ({
+          x: b.x,
+          y: b.y,
+          type: b.type
+      }));
+      console.log('Saving buildings:', buildingsData);
+      sessionStorage.setItem(this.STORAGE_KEY, JSON.stringify(buildingsData));
+      
+      // Restaurer le curseur normal
+      if (this.uiScene) {
+          this.uiScene.defaultCursor.setVisible(true);
+      }
+  }
+}
 
   // private addTree(x: number, y: number): void {
   //   const tree = new Tree(this, x, y)
