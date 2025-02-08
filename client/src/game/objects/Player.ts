@@ -18,13 +18,19 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.cursors = scene.input.keyboard.createCursorKeys()
 
     // Configuration de la hitbox
-    const bodyWidth = 8
+    const bodyWidth = 12
     const bodyHeight = 6
     this.body.setSize(bodyWidth, bodyHeight)
 
     const offsetX = (96 - bodyWidth) / 2
     const offsetY = (64 - bodyHeight) / 1.8
     this.body.setOffset(offsetX, offsetY)
+
+    /*
+    const offsetX = (96 - bodyWidth) / 1.95
+    const offsetY = (64 - bodyHeight) / 1.95
+    this.body.setCircle(5, offsetX, offsetY)
+    */
 
     this.createAnimations()
     this.play('idle')

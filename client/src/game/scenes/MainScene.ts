@@ -4,6 +4,8 @@ import { Tree } from '../objects/Tree';
 import { DialogService } from '../services/DialogService';
 import { BuildingPreview } from '../objects/BuildingPreview';
 import { Building } from '../objects/Building';
+import { BuildingManager } from '../services/BuildingManager';
+import { TiledBuildingPreview } from '../objects/TiledBuildingPreview';
 
 interface LayerConfig {
   layer: Phaser.Tilemaps.TilemapLayer;
@@ -27,6 +29,10 @@ export class MainScene extends Scene {
   private buildingPreview: BuildingPreview | null = null;
   private selectedBuildingType: string | null = null;
   private buildings: Building[] = [];
+  private buildingManager!: BuildingManager;
+  private resources = {
+    wood: 0
+  };
 
   constructor() {
     super({ key: 'MainScene' })
@@ -63,8 +69,18 @@ export class MainScene extends Scene {
     this.load.image('action-button', 'ui/action-button.png')
     this.load.image('cursor', 'ui/cursor.png')
     this.load.image('cursor-chopping', 'ui/cursor-chopping.png')
+
+
+
     this.load.image('house', 'buildings/house.png');
     this.load.image('sawmill', 'buildings/sawmill.png');
+
+    this.load.tilemapTiledJSON('house-template', 'buildings/templates/house-template.json');
+    this.load.tilemapTiledJSON('sawmill-template', 'buildings/templates/sawmill-template.json');
+
+    // Charger les icônes pour l'UI
+    this.load.image('house-icon', 'ui/icons/house.png');
+    this.load.image('sawmill-icon', 'ui/icons/sawmill.png');
   }
 
   create() {
@@ -198,7 +214,36 @@ export class MainScene extends Scene {
     this.spawnTreesFromObjectLayer()
 
     // Écouter l'événement d'ajout de bois
-    this.events.on('addWood', this.addWood, this)
+    this.events.on('addWood', (amount: number) => {
+      this.resources.wood += amount;
+      this.events.emit('resourcesUpdated', this.resources);
+    });
+
+    this.game.events.on('selectBuilding', (buildingType: string) => {
+      const buildingUI = this.scene.get('BuildingUI') as BuildingUI;
+
+      if (buildingUI.canAffordBuilding(buildingType, this.resources)) {
+        this.selectedBuildingType = buildingType;
+        // Créer l'aperçu basé sur le template Tiled
+        if (this.buildingPreview) {
+          this.buildingPreview.destroy();
+        }
+        this.buildingPreview = new TiledBuildingPreview(
+          this,
+          buildingType
+        );
+      } else {
+        // Afficher un message d'erreur
+        this.showResourceError();
+      }
+    });
+
+    // Écouter l'événement de nettoyage
+    this.game.events.on('clearBuildings', () => {
+      this.buildingManager.clearAll();
+    });
+
+
     this.initializeBuildingSystem();
 
     // Démarrer la scène UI des bâtiments
@@ -219,14 +264,51 @@ export class MainScene extends Scene {
       });
     }
 
-    if(sessionStorage.getItem(this.STORAGE_KEY)){
-      let savedBuildings = JSON.parse(sessionStorage.getItem(this.STORAGE_KEY) ?? '');
-      savedBuildings.forEach(build => {
-        const building = new Building(this, build.x, build.y, build.type);
-        this.buildings.push(building);
-      }); 
-    }
+    this.buildingManager = new BuildingManager(this);
+    this.buildingManager.loadState();
 
+    // Modifier la méthode de placement
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (this.buildingPreview && this.buildingPreview.isValidPlacement()) {
+        const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+        const building = this.buildingManager.placeBuilding(
+          this.selectedBuildingType!,
+          Math.floor(worldPoint.x / 16) * 16,
+          Math.floor(worldPoint.y / 16) * 16
+        );
+
+        if (building) {
+          building.setupCollisions(this.player);
+        }
+      }
+    });
+
+  }
+
+
+  private showResourceError(): void {
+    // Afficher un message d'erreur temporaire
+    const text = this.add.text(
+      this.cameras.main.centerX,
+      100,
+      'Ressources insuffisantes!',
+      {
+        fontSize: '24px',
+        color: '#ff0000',
+        backgroundColor: '#000000',
+        padding: { x: 10, y: 5 }
+      }
+    )
+      .setScrollFactor(0)
+      .setOrigin(0.5);
+
+    this.tweens.add({
+      targets: text,
+      alpha: 0,
+      duration: 2000,
+      ease: 'Power2',
+      onComplete: () => text.destroy()
+    });
   }
 
   private spawnTreesFromObjectLayer(): void {
@@ -269,126 +351,150 @@ export class MainScene extends Scene {
   private initializeBuildingSystem(): void {
     // Écouter les événements de sélection de bâtiment
     this.game.events.on('selectBuilding', this.onBuildingSelected, this);
-    
+
     // Gérer le mouvement de la souris pour l'aperçu
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-        if (this.buildingPreview) {
-            const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-            this.buildingPreview.updatePosition(worldPoint.x, worldPoint.y);
-            this.checkPlacementValidity(worldPoint);
-        }
+      if (this.buildingPreview) {
+        const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+        this.buildingPreview.updatePosition(worldPoint.x, worldPoint.y);
+        this.checkPlacementValidity(worldPoint);
+      }
     });
-    
+
     // Gérer le clic pour placer le bâtiment
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-        if (this.buildingPreview && this.buildingPreview.isValidPlacement()) {
-            this.placeBuilding(pointer);
-        }
+      if (this.buildingPreview && this.buildingPreview.isValidPlacement()) {
+        this.placeBuilding(pointer);
+      }
     });
-}
+  }
 
-private onBuildingSelected(buildingType: string): void {
-    this.selectedBuildingType = buildingType;
+
+  private checkPlacementValidity(worldPoint: Phaser.Math.Vector2): void {
+    if (!this.buildingPreview || !this.map) return;
+
+    const tileX = Math.floor(worldPoint.x / 16);
+    const tileY = Math.floor(worldPoint.y / 16);
     
+    const { tilesWidth, tilesHeight } = this.buildingPreview.getDimensions();
+    
+    let isValid = true;
+    
+    // 1. Vérifier les limites de la carte
+    if (tileX < 0 || tileY < 0 || 
+        tileX + tilesWidth > this.map.width || 
+        tileY + tilesHeight > this.map.height) {
+        isValid = false;
+    } else {
+        // 2. Vérifier les collisions pour chaque tile dans la zone
+        for (let x = 0; x < tilesWidth; x++) {
+            for (let y = 0; y < tilesHeight; y++) {
+                const currentTileX = tileX + x;
+                const currentTileY = tileY + y;
+                
+                // Vérifier chaque layer
+                for (const [layerName, config] of this.mapLayers.entries()) {
+                    const layer = config.layer;
+                    const tile = layer.getTileAt(currentTileX, currentTileY);
+                    
+                    if (tile) {
+                        // Vérifier les collisions standards (propriété collides)
+                        if (config.hasCollision && tile.properties && tile.properties.collides) {
+                            isValid = false;
+                            break;
+                        }
+
+                        // Vérifier si le tile a une collision personnalisée
+                        if (tile.tileset) {  // Vérifier que le tile a un tileset
+                            const customCollisions = tile.tileset.getTileData(tile.index);
+                            if (customCollisions && customCollisions.objectgroup) {
+                                isValid = false;
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                if (!isValid) break;
+                
+                // 3. Vérifier les collisions avec les autres bâtiments
+                const hasBuildingCollision = this.buildings.some(building => {
+                    const pos = building.getPosition();
+                    const buildingTileX = Math.floor(pos.x / 16);
+                    const buildingTileY = Math.floor(pos.y / 16);
+                    const dims = building.getDimensions();
+                    
+                    return currentTileX >= buildingTileX && 
+                           currentTileX < buildingTileX + dims.tilesWidth &&
+                           currentTileY >= buildingTileY && 
+                           currentTileY < buildingTileY + dims.tilesHeight;
+                });
+                
+                if (hasBuildingCollision) {
+                    isValid = false;
+                    break;
+                }
+            }
+            if (!isValid) break;
+        }
+    }
+    
+    // Debug en mode développement
+    if (process.env.NODE_ENV === 'development') {
+        const worldTileX = Math.floor(worldPoint.x / 16);
+        const worldTileY = Math.floor(worldPoint.y / 16);
+        console.debug('Placement check:', {
+            position: { x: worldTileX, y: worldTileY },
+            isValid,
+            reason: !isValid ? 'Collision detected' : 'Valid placement'
+        });
+    }
+    
+    this.buildingPreview.setValidPlacement(isValid);
+  }
+
+  private onBuildingSelected(buildingType: string): void {
+    this.selectedBuildingType = buildingType;
+
     // Supprimer l'ancien aperçu s'il existe
     if (this.buildingPreview) {
-        this.buildingPreview.destroy();
+      this.buildingPreview.destroy();
     }
-    
-    // Créer un nouvel aperçu
-    this.buildingPreview = new BuildingPreview(this, buildingType);
-    
+
+    // Créer un nouvel aperçu en utilisant le template Tiled
+    const templateKey = `${buildingType}-template`;
+    this.buildingPreview = new TiledBuildingPreview(this, templateKey);
+
     // Masquer temporairement le curseur normal
     if (this.uiScene) {
-        this.uiScene.defaultCursor.setVisible(false);
-        this.uiScene.hoverCursor.setVisible(false);
+      this.uiScene.defaultCursor.setVisible(false);
+      this.uiScene.hoverCursor.setVisible(false);
     }
-}
-
-private checkPlacementValidity(worldPoint: Phaser.Math.Vector2): void {
-  if (!this.buildingPreview || !this.map) return;
-
-  const tileX = Math.floor(worldPoint.x / 16);
-  const tileY = Math.floor(worldPoint.y / 16);
-  
-  // Obtenir les dimensions du bâtiment en tiles
-  const { tilesWidth, tilesHeight } = this.buildingPreview.getDimensions();
-  
-  let isValid = true;
-  
-  // Vérifier toutes les tuiles que le bâtiment va occuper
-  for (let x = 0; x < tilesWidth; x++) {
-      for (let y = 0; y < tilesHeight; y++) {
-          const currentTileX = tileX + x;
-          const currentTileY = tileY + y;
-          
-          // Vérifier les collisions sur tous les layers
-          for (const [_, config] of this.mapLayers.entries()) {
-              if (config.hasCollision) {
-                  const tile = config.layer.getTileAt(currentTileX, currentTileY);
-                  if (tile && tile.properties && tile.properties.collides) {
-                      isValid = false;
-                      break;
-                  }
-              }
-          }
-          
-          // Vérifier les bâtiments existants
-          const hasBuildingHere = this.buildings.some(building => {
-              const buildingTileX = Math.floor(building.x / 16);
-              const buildingTileY = Math.floor(building.y / 16);
-              const buildingDimensions = building.getDimensions();
-              
-              return currentTileX >= buildingTileX && 
-                     currentTileX < buildingTileX + buildingDimensions.tilesWidth &&
-                     currentTileY >= buildingTileY && 
-                     currentTileY < buildingTileY + buildingDimensions.tilesHeight;
-          });
-          
-          if (hasBuildingHere) {
-              isValid = false;
-              break;
-          }
-      }
-      
-      if (!isValid) break;
   }
-  
-  this.buildingPreview.setValidPlacement(isValid);
-}
 
-private placeBuilding(pointer: Phaser.Input.Pointer): void {
-  if (!this.buildingPreview || !this.selectedBuildingType) return;
-  
-  if (this.buildingPreview.isValidPlacement()) {
+  private placeBuilding(pointer: Phaser.Input.Pointer): void {
+    if (!this.buildingPreview || !this.selectedBuildingType) return;
+
+    if (this.buildingPreview.isValidPlacement()) {
       const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
       const snappedX = Math.floor(worldPoint.x / 16) * 16;
       const snappedY = Math.floor(worldPoint.y / 16) * 16;
-      
-      // Créer le bâtiment permanent
-      const building = new Building(this, snappedX, snappedY, this.selectedBuildingType);
-      this.buildings.push(building);
-      
+
+      // Utiliser le building manager pour placer le bâtiment Tiled
+      const templateKey = `${this.selectedBuildingType}-template`;
+      this.buildingManager.placeBuilding(this.selectedBuildingType, snappedX, snappedY);
+
       // Réinitialiser l'aperçu et la sélection
       this.buildingPreview.destroy();
       this.buildingPreview = null;
       this.selectedBuildingType = null;
-      
-      // Sauvegarder les bâtiments
-      const buildingsData = this.buildings.map(b => ({
-          x: b.x,
-          y: b.y,
-          type: b.type
-      }));
-      console.log('Saving buildings:', buildingsData);
-      sessionStorage.setItem(this.STORAGE_KEY, JSON.stringify(buildingsData));
-      
+
       // Restaurer le curseur normal
       if (this.uiScene) {
-          this.uiScene.defaultCursor.setVisible(true);
+        this.uiScene.defaultCursor.setVisible(true);
       }
+    }
   }
-}
 
   // private addTree(x: number, y: number): void {
   //   const tree = new Tree(this, x, y)
@@ -431,5 +537,6 @@ private placeBuilding(pointer: Phaser.Input.Pointer): void {
     this.player.update()
     this.trees.forEach(tree => tree.update())
     this.trees = this.trees.filter(tree => tree.scene)
+    this.buildingManager.updateBuildings(this.player);
   }
 }
