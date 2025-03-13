@@ -1,4 +1,5 @@
 import { Scene } from 'phaser'
+import EasyStar from 'easystarjs'  
 import { Player } from '../objects/Player'
 import { Tree } from '../objects/Tree';
 import { DialogService } from '../services/DialogService';
@@ -6,6 +7,7 @@ import { BuildingPreview } from '../objects/BuildingPreview';
 import { Building } from '../objects/Building';
 import { BuildingManager } from '../services/BuildingManager';
 import { TiledBuildingPreview } from '../objects/TiledBuildingPreview';
+import type { TiledBuilding } from '../objects/TiledBuilding';
 
 interface LayerConfig {
   layer: Phaser.Tilemaps.TilemapLayer;
@@ -15,14 +17,12 @@ interface LayerConfig {
 
 export class MainScene extends Scene {
   private STORAGE_KEY = 'BUILDINGS_STORAGE';
-
-  private player!: Player
-  // private interactionZones: InteractionZone[] = []
-  private map!: Phaser.Tilemaps.Tilemap
-  private mapLayers: Map<string, LayerConfig> = new Map()
-  private trees: Tree[] = []
-  private woodCount: number = 0
-  private woodText!: Phaser.GameObjects.Text
+  private player!: Player;
+  private map!: Phaser.Tilemaps.Tilemap;
+  private mapLayers: Map<string, LayerConfig> = new Map();
+  private trees: Tree[] = [];
+  private woodCount: number = 0;
+  private woodText!: Phaser.GameObjects.Text;
   private dialogService!: DialogService;
   private targetWood: number = 5;
   private hasShownCompletionDialog: boolean = false;
@@ -33,9 +33,14 @@ export class MainScene extends Scene {
   private resources = {
     wood: 0
   };
+  private easyStar: EasyStar.js;     
+  private tileWidth: number = 16;    
+  private tileHeight: number = 16;
+  private baseGrid: number[][] = [];
 
   constructor() {
     super({ key: 'MainScene' })
+    this.easyStar = new EasyStar.js();
   }
 
   preload() {
@@ -143,51 +148,46 @@ export class MainScene extends Scene {
     const allLayers = this.map.layers
 
     // Création du joueur avant les layers qui doivent apparaître au-dessus
-    this.player = new Player(this, 230, 200)
+    this.player = new Player(this, 830, 700)
     this.player.setScale(1)
 
     // Création et configuration automatique des layers
     allLayers.forEach(layerData => {
-      // Création du layer
-      const layer = this.map.createLayer(layerData.name, tileset, 0, 0)
-      if (!layer) return
+      const layer = this.map.createLayer(layerData.name, tileset, 0, 0);
+      if (!layer) return;
 
-      // Lecture des propriétés personnalisées du layer depuis Tiled
-      const properties = this.getTiledProperties(layerData)
+      const properties = this.getTiledProperties(layerData);
+      const hasCollision = properties.hasCollision ?? false;
+      const isAbovePlayer = properties.isAbovePlayer ?? false;
 
-      const hasCollision = properties.hasCollision ?? false
-      const isAbovePlayer = properties.isAbovePlayer ?? false
-
-      // Configuration des collisions si nécessaire
       if (hasCollision) {
-        // Collisions basées sur les propriétés de Tiled
-        layer.setCollisionByProperty({ collides: true })
-        this.physics.add.collider(this.player, layer)
+        // SetCollisionByProperty => On active la collision sur ces tuiles
+        layer.setCollisionByProperty({ collides: true });
+        //this.physics.add.collider(this.player, layer);
       }
 
-      // Gestion de la profondeur si le layer doit être au-dessus du joueur
       if (isAbovePlayer) {
-        layer.setDepth(10) // Le joueur aura une profondeur de 1
+        layer.setDepth(10);
       }
 
-      // Stockage de la configuration du layer
       this.mapLayers.set(layerData.name, {
         layer,
         hasCollision,
         isAbovePlayer
-      })
-    })
+      });
+    });
 
     // Configuration du joueur
     this.player.setDepth(1)
 
     // Configuration de la caméra
-    this.cameras.main.startFollow(this.player)
-    this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels)
+    this.cameras.main.startFollow(this.player);
+    this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
+    this.physics.world.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
 
     const minDimension = Math.min(window.innerWidth, window.innerHeight)
-    const zoomLevel = minDimension / 300 // Ajustez 800 selon vos besoins
-    this.cameras.main.setZoom(Math.min(4.1, zoomLevel)) // Limite le zoom maximum à 2
+    const zoomLevel = minDimension / 280 // Ajustez 800 selon vos besoins
+    this.cameras.main.setZoom(Math.min(3.3, zoomLevel)) // Limite le zoom maximum à 2
 
     // Configuration des limites du monde
     this.physics.world.bounds.width = this.map.widthInPixels
@@ -250,7 +250,7 @@ export class MainScene extends Scene {
     this.scene.launch('BuildingUI');
 
     // Dans la méthode create() de MainScene
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === 'development' && false) {
       this.mapLayers.forEach((config, name) => {
         if (config.hasCollision) {
           const layer = this.map.getLayer(name).tilemapLayer;
@@ -266,26 +266,160 @@ export class MainScene extends Scene {
 
     this.buildingManager = new BuildingManager(this);
     this.buildingManager.loadState();
+    this.rebuildPathfindingGrid(); 
 
-    // Modifier la méthode de placement
-    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (this.buildingPreview && this.buildingPreview.isValidPlacement()) {
-        const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-        const building = this.buildingManager.placeBuilding(
-          this.selectedBuildingType!,
-          Math.floor(worldPoint.x / 16) * 16,
-          Math.floor(worldPoint.y / 16) * 16
-        );
-
-        if (building) {
-          building.setupCollisions(this.player);
+    this.baseGrid = Array.from(
+      { length: this.map.height }, 
+      () => Array(this.map.width).fill(0)
+    );
+    
+    // Parcourt chaque layer ayant hasCollision = true
+    this.mapLayers.forEach((layerConfig) => {
+      if (!layerConfig.hasCollision) return; // On ignore ceux sans collision
+      const layer = layerConfig.layer;
+      for (let y = 0; y < this.map.height; y++) {
+        for (let x = 0; x < this.map.width; x++) {
+          const tile = layer.getTileAt(x, y);
+          if (!tile) continue;
+          
+          // Premier critère : la propriété "collides" au niveau de la tuile
+          const hasCollidesProp = !!(tile.properties && tile.properties.collides);
+    
+          // Deuxième critère : objectgroup dans le tileset (collision shapes)
+          const tileData = tile.tileset.getTileData(tile.index);
+          const hasCollisionShapes = tileData 
+              && tileData.objectgroup 
+              && tileData.objectgroup.objects 
+              && tileData.objectgroup.objects.length > 0;
+    
+          if (hasCollidesProp || hasCollisionShapes) {
+            this.baseGrid[y][x] = 1; // On marque la tuile comme bloquée
+          }
         }
       }
     });
+    
+    
+    // Ensuite on assigne cette grille globale à easystar
+    const fullGrid = this.copyGrid(this.baseGrid);
+    this.easyStar.setGrid(fullGrid);
+    this.easyStar.setAcceptableTiles([0]);
+    this.easyStar.enableDiagonals();
+    this.easyStar.setIterationsPerCalculation(10000);
+    //this.easyStar.enableCornerCutting();
+    this.easyStar.disableCornerCutting();
 
+    // ----------------- ÉCOUTE DU CLIC SOURIS POUR LE DÉPLACEMENT -----------------
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      // Convertir la position du clic en coordonnée de tuile
+      const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+      let targetTileX = Math.floor(worldPoint.x / this.tileWidth);
+      let targetTileY = Math.floor(worldPoint.y / this.tileHeight);
+    
+      // Récupérer la position "tuile" du joueur
+      const playerTileX = Math.floor(this.player.x / this.tileWidth);
+      const playerTileY = Math.floor(this.player.y / this.tileHeight);
+    
+      // Si la tuile cible a une collision, chercher la plus proche tuile accessible
+      if (this.baseGrid[targetTileY][targetTileX] === 1) {
+        const nearestTile = this.findNearestWalkableTile(targetTileX, targetTileY);
+        if (nearestTile) {
+          targetTileX = nearestTile.x;
+          targetTileY = nearestTile.y;
+        } else {
+          console.log('Aucune tuile accessible trouvée à proximité');
+          return;
+        }
+      }
+    
+      // Calculer un chemin avec EasyStar
+      this.easyStar.findPath(
+        playerTileX,
+        playerTileY,
+        targetTileX,
+        targetTileY,
+        (path) => {
+          if (path === null) {
+            console.log('Aucun chemin trouvé !');
+          } else {
+            this.player.setPath(path);
+          }
+        }
+      );
+    
+      this.easyStar.calculate();
+    });
+
+    this.rebuildPathfindingGrid()
   }
 
+  private copyGrid(source: number[][]): number[][] {
+    // Double "map" ou slice pour avoir une copie en profondeur
+    return source.map(row => [...row]);
+  }
 
+  private rebuildPathfindingGrid() {
+    const fullGrid = this.copyGrid(this.baseGrid);
+  
+    // Ajouter les collisions des bâtiments
+    this.buildingManager.getBuildings().forEach(building => {
+        const { x, y } = building.getPosition();
+        const { tilesWidth, tilesHeight } = building.getDimensions();
+    
+        // Convertir en indices de tuiles
+        const tileX = Math.floor(x / this.tileWidth);
+        const tileY = Math.floor(y / this.tileHeight);
+    
+        // Récupérer la sub-map Tiled du bâtiment
+        const buildingMap = building.getMap();
+        
+        buildingMap.layers.forEach(layerData => {
+            const layer = buildingMap.getLayer(layerData.name);
+            if (!layer) return;
+
+            for (let ty = 0; ty < layer.tilemapLayer.layer.height; ty++) {
+                for (let tx = 0; tx < layer.tilemapLayer.layer.width; tx++) {
+                    const tile = layer.tilemapLayer.getTileAt(tx, ty);
+                    if (!tile) continue;
+
+                    const hasCollidesProp = !!(tile.properties && tile.properties.collides);
+                    const tileData = tile.tileset.getTileData(tile.index);
+                    const hasCollisionShapes = tileData 
+                        && tileData.objectgroup 
+                        && tileData.objectgroup.objects 
+                        && tileData.objectgroup.objects.length > 0;
+
+                    if (hasCollidesProp || hasCollisionShapes) {
+                        const gx = tileX + tx;
+                        const gy = tileY + ty;
+
+                        if (gy >= 0 && gy < fullGrid.length && gx >= 0 && gx < fullGrid[0].length) {
+                            fullGrid[gy][gx] = 1;
+                        }
+                    }
+                }
+            }
+        });
+    });
+
+    // Ajouter les collisions des arbres (vivants ou souches)
+    this.trees.forEach(tree => {
+        // Récupérer la position en tuiles
+        const pos = tree.getTreeTilePosition();
+
+        // Si l'entité bloque le passage (arbre ou souche)
+        if (tree.isBlockingPath()) {
+            // Ajouter la collision dans la grille
+            if (pos.y >= 0 && pos.y < fullGrid.length && 
+                pos.x >= 0 && pos.x < fullGrid[0].length) {
+                fullGrid[pos.y][pos.x] = 1;
+            }
+        }
+    });
+  
+    this.easyStar.setGrid(fullGrid);
+}
+  
   private showResourceError(): void {
     // Afficher un message d'erreur temporaire
     const text = this.add.text(
@@ -369,6 +503,51 @@ export class MainScene extends Scene {
     });
   }
 
+  private markBuildingCollisions(building: TiledBuilding) {
+    // Récupérer la sub-map Tiled du bâtiment
+    const buildingMap = building.getMap(); 
+    // Borne en tuiles dans la map principale
+    const offsetX = Math.floor(building.getPosition().x / this.tileWidth);
+    const offsetY = Math.floor(building.getPosition().y / this.tileHeight);
+  
+    // Pour chaque layer du buildingMap
+    buildingMap.layers.forEach(layerData => {
+      // Récupérer l'objet layer
+      const layer = buildingMap.getLayer(layerData.name);
+      if (!layer) return;
+  
+      // Parcourir toutes les tuiles
+      for (let ty = 0; ty < layer.tilemapLayer.layer.height; ty++) {
+        for (let tx = 0; tx < layer.tilemapLayer.layer.width; tx++) {
+          const tile = layer.tilemapLayer.getTileAt(tx, ty);
+          if (!tile) continue;
+  
+          // Si la tuile du bâtiment est bloquante
+          const hasCollidesProp = !!(tile.properties && tile.properties.collides);
+          const tileData = tile.tileset.getTileData(tile.index);
+          const hasCollisionShapes = tileData 
+              && tileData.objectgroup 
+              && tileData.objectgroup.objects 
+              && tileData.objectgroup.objects.length > 0;
+  
+          if (hasCollidesProp || hasCollisionShapes) {
+            // On convertit en coord. de la map globale
+            const gx = offsetX + tx;
+            const gy = offsetY + ty;
+  
+            // On marque dans baseGrid
+            if (
+              gy >= 0 && gy < this.baseGrid.length &&
+              gx >= 0 && gx < this.baseGrid[0].length
+            ) {
+              this.baseGrid[gy][gx] = 1; 
+            }
+          }
+        }
+      }
+    });
+  }
+  
 
   private checkPlacementValidity(worldPoint: Phaser.Math.Vector2): void {
     if (!this.buildingPreview || !this.map) return;
@@ -474,26 +653,64 @@ export class MainScene extends Scene {
 
   private placeBuilding(pointer: Phaser.Input.Pointer): void {
     if (!this.buildingPreview || !this.selectedBuildingType) return;
-
+  
     if (this.buildingPreview.isValidPlacement()) {
       const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
       const snappedX = Math.floor(worldPoint.x / 16) * 16;
       const snappedY = Math.floor(worldPoint.y / 16) * 16;
 
-      // Utiliser le building manager pour placer le bâtiment Tiled
-      const templateKey = `${this.selectedBuildingType}-template`;
-      this.buildingManager.placeBuilding(this.selectedBuildingType, snappedX, snappedY);
+      // Placer le bâtiment une seule fois
+      const newBuilding = this.buildingManager.placeBuilding(
+        this.selectedBuildingType, 
+        snappedX, 
+        snappedY
+      );
 
-      // Réinitialiser l'aperçu et la sélection
+      // Marquer les collisions et mettre à jour la grille de pathfinding
+      this.markBuildingCollisions(newBuilding);
+      this.rebuildPathfindingGrid();
+  
+      // Réinitialiser l'aperçu 
       this.buildingPreview.destroy();
       this.buildingPreview = null;
       this.selectedBuildingType = null;
-
-      // Restaurer le curseur normal
+  
+      // Restaurer le curseur
       if (this.uiScene) {
         this.uiScene.defaultCursor.setVisible(true);
       }
     }
+  }
+  
+  private findNearestWalkableTile(targetX: number, targetY: number): { x: number, y: number } | null {
+    // Distance maximale de recherche
+    const maxSearchDistance = 5;
+    
+    // Explorer en spirale autour du point cible
+    for (let d = 1; d <= maxSearchDistance; d++) {
+      // Vérifier toutes les tuiles à la distance d
+      for (let offsetY = -d; offsetY <= d; offsetY++) {
+        for (let offsetX = -d; offsetX <= d; offsetX++) {
+          // Ne vérifier que les tuiles sur le "périmètre" du carré actuel
+          if (Math.abs(offsetX) === d || Math.abs(offsetY) === d) {
+            const checkX = targetX + offsetX;
+            const checkY = targetY + offsetY;
+            
+            // Vérifier que la tuile est dans les limites de la map
+            if (checkX >= 0 && checkX < this.map.width && 
+                checkY >= 0 && checkY < this.map.height) {
+              
+              // Vérifier si la tuile est marchable (= 0 dans notre grille)
+              if (this.baseGrid[checkY][checkX] === 0) {
+                return { x: checkX, y: checkY };
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    return null; // Aucune tuile marchable trouvée dans le rayon de recherche
   }
 
   // private addTree(x: number, y: number): void {
@@ -519,13 +736,11 @@ export class MainScene extends Scene {
 
   private getTiledProperties(layerData: Phaser.Tilemaps.LayerData): Record<string, any> {
     const properties: Record<string, any> = {}
-
     if (layerData.properties && Array.isArray(layerData.properties)) {
       layerData.properties.forEach(prop => {
         properties[prop.name] = prop.value
       })
     }
-
     return properties
   }
 

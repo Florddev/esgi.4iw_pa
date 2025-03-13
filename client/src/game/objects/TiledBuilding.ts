@@ -186,6 +186,10 @@ export class TiledBuilding {
         });
     }
 
+    public getMap(): Phaser.Tilemaps.Tilemap {
+        return this.map; 
+    }
+
     private setupTileCollisions(layer: Phaser.Tilemaps.TilemapLayer, offsetX: number, offsetY: number): void {
         // Parcourir chaque tile du layer
         for (let y = 0; y < layer.layer.height; y++) {
@@ -247,7 +251,7 @@ export class TiledBuilding {
     
     public setupCollisions(player: Phaser.Physics.Arcade.Sprite): void {
         this.collisionBodies.forEach(body => {
-            this.scene.physics.add.collider(player, body);
+            //this.scene.physics.add.collider(player, body);
         });
     }
 

@@ -3,10 +3,12 @@ import { Scene } from 'phaser'
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   private cursors: Phaser.Types.Input.Keyboard.CursorKeys
-  private moveSpeed: number = 50
+  private moveSpeed: number = 80
   private isMoving: boolean = false
   private facingLeft: boolean = false
   private isChopping: boolean = false
+  private path: { x: number; y: number }[] = [];    // <-- tableau de points (tuiles) à suivre
+  private currentTargetIndex: number = 0;           // <-- index du point courant dans le path
 
   constructor(scene: Scene, x: number, y: number) {
     super(scene, x, y, 'player-idle')
@@ -34,9 +36,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     this.createAnimations()
     this.play('idle')
-
-    // Debug: Afficher toutes les animations disponibles
-    console.log('Animations disponibles:', this.anims.animationManager.anims.keys())
   }
 
   public isInteracting(): boolean {
@@ -73,7 +72,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         start: 0,
         end: 7  // Ajustez selon votre spritesheet
       }),
-      frameRate: 12,
+      frameRate: 16,
       repeat: 0
     })
 
@@ -85,6 +84,20 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     })
   }
 
+  public setPath(path: { x: number; y: number }[]): void {
+    // On retire le premier point du path s’il correspond à la position actuelle
+    // (car le path inclut souvent la case de départ).
+    if (path.length > 0) {
+      const first = path[0];
+      if (first.x === Math.floor(this.x / 16) && first.y === Math.floor(this.y / 16)) {
+        path.shift();
+      }
+    }
+
+    this.path = path;
+    this.currentTargetIndex = 0;
+  }
+
   public stopChopAnimation(): void {
     if (this.isChopping) {
       this.isChopping = false;
@@ -94,56 +107,56 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   update(): void {
-    if (this.isChopping) return; // Ne pas permettre le mouvement pendant la coupe
+    // Si on est en train de couper l’arbre, pas de mouvement
+    if (this.isChopping) return; 
 
-    // Réinitialisation de la vélocité
-    this.setVelocity(0)
+    // Si on a encore des points dans le chemin, on avance vers le prochain
+    if (this.path.length > 0 && this.currentTargetIndex < this.path.length) {
+      const targetTile = this.path[this.currentTargetIndex];
 
-    // Variable pour suivre si le personnage se déplace
-    let isMoving = false
+      // Convertir coords tuile => coords monde
+      const targetX = targetTile.x * 16 + 8;  // +8 pour centrer sur la tuile
+      const targetY = targetTile.y * 16 + 8;
 
-    // Gestion des mouvements
-    if (this.cursors.left.isDown) {
-      this.setVelocityX(-this.moveSpeed)
-      this.setFlipX(true)
-      this.facingLeft = true
-      isMoving = true
-    } else if (this.cursors.right.isDown) {
-      this.setVelocityX(this.moveSpeed)
-      this.setFlipX(false)
-      this.facingLeft = false
-      isMoving = true
-    }
+      // Calcul de la direction
+      const dx = targetX - this.x;
+      const dy = targetY - this.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
 
-    if (this.cursors.up.isDown) {
-      this.setVelocityY(-this.moveSpeed)
-      isMoving = true
-    } else if (this.cursors.down.isDown) {
-      this.setVelocityY(this.moveSpeed)
-      isMoving = true
-    }
-
-    // Normalisation de la vitesse en diagonale
-    if (this.body.velocity.x !== 0 && this.body.velocity.y !== 0) {
-      this.body.velocity.normalize().scale(this.moveSpeed)
-    }
-
-    // Gestion des animations si on ne coupe pas
-    if (!this.isChopping) {
-      if (isMoving) {
-        if (!this.anims.isPlaying || this.anims.currentAnim?.key !== 'walk') {
-          this.play('walk', true)
+      if (dist < 2) {
+        // On considère qu’on est arrivé à la tuile cible => passer à la suivante
+        this.currentTargetIndex++;
+        if (this.currentTargetIndex >= this.path.length) {
+          // On a fini le chemin
+          this.path = [];
+          this.setVelocity(0, 0);
+          this.play('idle', true);
+          return;
         }
       } else {
-        if (!this.anims.isPlaying || this.anims.currentAnim?.key !== 'idle') {
-          this.play('idle', true)
+        // On avance
+        const angle = Math.atan2(dy, dx);
+        const vx = Math.cos(angle) * this.moveSpeed;
+        const vy = Math.sin(angle) * this.moveSpeed;
+        this.setVelocity(vx, vy);
+
+        // Gestion de l’animation de marche
+        if (!this.anims.isPlaying || this.anims.currentAnim?.key !== 'walk') {
+          this.play('walk', true);
         }
+
+        // Gérer flipX pour orientation
+        this.setFlipX(vx < 0);
+      }
+    } else {
+      // Pas de path => on s’arrête
+      this.setVelocity(0, 0);
+      if (!this.anims.isPlaying || this.anims.currentAnim?.key !== 'idle') {
+        this.play('idle', true);
       }
     }
-
-    // Maintenir la direction du sprite
-    this.setFlipX(this.facingLeft)
   }
+
 
   public isFacingObject(objectX: number, objectY: number): boolean {
     // Calculer la différence entre la position du joueur et de l'objet
@@ -164,36 +177,22 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   public playChopAnimation(onHitFrame?: () => void): void {
-    // Si déjà en train de couper, ne rien faire
-    if (this.isChopping) {
-      return;
-    }
+    if (this.isChopping) return;
 
-    console.log('Démarrage animation de coupe');
     this.isChopping = true;
-
-    // Arrêter les autres animations
     this.anims.stop();
-
-    // Jouer l'animation de coupe
     this.play('chop', true);
 
-    // Écouter la frame spécifique de frappe
-    this.on('animationupdate', (anim: Phaser.Animations.Animation, frame: Phaser.Animations.AnimationFrame) => {
-        // Par exemple, à la 4ème frame (vous pouvez ajuster selon votre spritesheet)
-        if (frame.index === 8 && onHitFrame) {
-            onHitFrame();
-        }
+    this.on('animationupdate', (anim, frame) => {
+      if (frame.index === 8 && onHitFrame) {
+        onHitFrame();
+      }
     });
 
-    // Écouter la fin de l'animation
     this.once('animationcomplete', () => {
-        console.log('Animation de coupe terminée');
-        this.isChopping = false;
-        this.play('idle', true);
-        
-        // Supprimer l'écouteur de mise à jour d'animation
-        this.off('animationupdate');
+      this.isChopping = false;
+      this.play('idle', true);
+      this.off('animationupdate');
     });
   }
 }

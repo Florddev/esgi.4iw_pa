@@ -18,7 +18,7 @@ export class Tree extends Phaser.Physics.Arcade.Sprite {
     private detectionZone?: Phaser.GameObjects.Zone
     private maxHealth: number = 100
     private currentHealth: number = this.maxHealth
-    private damagePerHit: number = 10
+    private damagePerHit: number = 25
     private healthBar?: Phaser.GameObjects.Sprite;
     private healingTimer?: Phaser.Time.TimerEvent
     private lastPlayerPosition?: { x: number, y: number }
@@ -125,6 +125,92 @@ export class Tree extends Phaser.Physics.Arcade.Sprite {
         this.healthBar.setDepth(1000);
     }
 
+    public startChoppingSequence(player: Player): void {
+        // Vérifie si l'arbre n'est pas déjà en train d'être coupé
+        if (this.isBeingHit || this.isDestroyed) return;
+    
+        const interactionPoint = this.findNearestInteractionPoint(player.x, player.y);
+        
+        // Convertir en coordonnées de tuiles pour le pathfinding
+        const targetTileX = Math.floor(interactionPoint.x / 16);
+        const targetTileY = Math.floor(interactionPoint.y / 16);
+        const playerTileX = Math.floor(player.x / 16);
+        const playerTileY = Math.floor(player.y / 16);
+    
+        // Obtenir la référence à la scène principale
+        const mainScene = this.scene as any;
+        
+        // Utiliser le pathfinding pour se rendre au point d'interaction
+        mainScene.easyStar.findPath(
+            playerTileX,
+            playerTileY,
+            targetTileX,
+            targetTileY,
+            (path) => {
+                if (path === null) {
+                    console.log('Impossible d\'atteindre l\'arbre');
+                    return;
+                }
+    
+                // Définir le chemin pour le joueur
+                player.setPath(path);
+                
+                // Variables pour suivre si le joueur est arrêté
+                let lastX = player.x;
+                let lastY = player.y;
+                let stablePositionCount = 0; // Compte combien de fois le joueur est resté immobile
+                
+                // Attendre que le joueur arrive à destination
+                const checkInterval = mainScene.time.addEvent({
+                    delay: 100,
+                    callback: () => {
+                        const distanceToTarget = Phaser.Math.Distance.Between(
+                            player.x,
+                            player.y,
+                            interactionPoint.x,
+                            interactionPoint.y
+                        );
+    
+                        // Vérifier si le joueur est arrêté
+                        const isNotMoving = lastX === player.x && lastY === player.y;
+                        
+                        // Mettre à jour les dernières positions
+                        lastX = player.x;
+                        lastY = player.y;
+    
+                        if (distanceToTarget < 20) { // Si assez proche
+                            if (isNotMoving) {
+                                stablePositionCount++;
+                                
+                                // Attendre que le joueur soit stable pendant 3 ticks (300ms)
+                                if (stablePositionCount >= 1) {
+                                    checkInterval.destroy();
+                                    
+                                    // S'assurer que le joueur est orienté vers l'arbre
+                                    const facingDirection = this.x > player.x ? false : true;
+                                    player.setFlipX(facingDirection);
+                                    
+                                    if (!this.isDestroyed) {
+                                        player.setFlipX(facingDirection);
+                                        this.isPlayerInRange = true;
+                                        this.startAutoHitSequence().catch(console.error);
+                                    }
+                                }
+                            } else {
+                                stablePositionCount = 0; // Réinitialiser si le joueur bouge
+                            }
+                        } else {
+                            stablePositionCount = 0; // Réinitialiser si trop loin
+                        }
+                    },
+                    loop: true
+                });
+            }
+        );
+    
+        mainScene.easyStar.calculate();
+    }
+
     private updateHealthBar(forceShow: boolean = false): void {
         if (!this.healthBar) return;
     
@@ -159,11 +245,11 @@ export class Tree extends Phaser.Physics.Arcade.Sprite {
     }
 
     private async startAutoHitSequence(): Promise<void> {
-        if (this.isBeingHit || !this.player || this.player.isInteracting() || this.isDestroyed) return
+        //if (this.isBeingHit || !this.player || this.player.isInteracting() || this.isDestroyed) return
 
         // Vérifier la direction du joueur vers l'arbre
         const isFacingTree = this.player.isFacingObject(this.x, this.y);
-        if (!isFacingTree) return;
+        //if (!isFacingTree) return;
 
         this.isBeingHit = true
         this.setDepth(0)
@@ -175,17 +261,26 @@ export class Tree extends Phaser.Physics.Arcade.Sprite {
         };
     
         let isSequenceCancelled = false;
-    
+
+        console.log('start choping animation');
         while (this.currentHealth > 0 && !this.isDestroyed && !isSequenceCancelled) {
+            console.log('while');
             // Vérifier si le joueur essaie de bouger
             if (this.player.cursors.left.isDown || 
                 this.player.cursors.right.isDown || 
                 this.player.cursors.up.isDown || 
                 this.player.cursors.down.isDown) {
+
+                console.log('sequenceCancelled: ', this.player.cursors.left.isDown,
+                    this.player.cursors.right.isDown,
+                    this.player.cursors.up.isDown,
+                    this.player.cursors.down.isDown);
+
                 this.stopAutoHit();
                 isSequenceCancelled = true;
                 break;
             }
+
             this.currentHealth -= this.damagePerHit;
             await this.performHit();
         }
@@ -215,9 +310,9 @@ export class Tree extends Phaser.Physics.Arcade.Sprite {
         this.startHealingTimer();
     }
 
-    private setupCursorEvents(){
+    private setupCursorEvents() {
         this.on('pointerover', () => {
-            if (!this.isDestroyed && this.scene.uiScene && this.isPlayerInRange) {
+            if (!this.isDestroyed && this.scene.uiScene) {
                 this.scene.uiScene.defaultCursor.setVisible(false);
                 this.scene.uiScene.hoverCursor.setVisible(true);
             }
@@ -229,12 +324,11 @@ export class Tree extends Phaser.Physics.Arcade.Sprite {
                 this.scene.uiScene.hoverCursor.setVisible(false);
             }
         });
-
-        // Ajout de l'événement de clic
+    
+        // Nouveau gestionnaire de clic
         this.on('pointerdown', () => {
-            if (!this.isDestroyed && this.isPlayerInRange && !this.isBeingHit) {
-                //this.startHitSequence();
-                this.onInteractionStart();
+            if (!this.isDestroyed && !this.isBeingHit && this.player) {
+                this.startChoppingSequence(this.player);
             }
         });
     }
@@ -291,7 +385,7 @@ export class Tree extends Phaser.Physics.Arcade.Sprite {
         }
 
         if (this.baseCollider) {
-            this.scene.physics.add.collider(player, this.baseCollider)
+            //this.scene.physics.add.collider(player, this.baseCollider)
         }
     }
 
@@ -310,39 +404,58 @@ export class Tree extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
+  
+    public getTreeTilePosition(): { x: number, y: number } {
+        return {
+            x: Math.floor(this.x / 16),
+            y: Math.floor(this.y / 16)
+        };
+    }
+      
+    public isBlockingPath(): boolean {
+        // Que l'arbre soit vivant ou une souche, il bloque toujours le passage
+        return true;
+    }
+    
     private cleanup(): void {
         this.isPlayerInRange = false;
         this.setVisible(false);
-
+        this.isDestroyed = true;
+    
         if (this.stump) {
             this.stump.setVisible(true);
         }
-
-        this.scene.uiScene.defaultCursor.setVisible(true);
-        this.scene.uiScene.hoverCursor.setVisible(false);
-
-        this.scene.time.delayedCall(this.respawnTime, () => this.respawn(), [], this);
-        
+    
+        //this.scene.uiScene.defaultCursor.setVisible(true);
+        //this.scene.uiScene.hoverCursor.setVisible(false);
+    
         if (this.healthBar) {
             this.healthBar.setVisible(false);
         }
+    
+        // Toujours maintenir la collision et la mise à jour du pathfinding
+        if (this.scene && (this.scene as any).rebuildPathfindingGrid) {
+            (this.scene as any).rebuildPathfindingGrid();
+        }
+    
+        this.scene.time.delayedCall(this.respawnTime, () => this.respawn(), [], this);
     }
 
     private respawn(): void {
         if (this.stump) {
             this.stump.setVisible(false)
         }
-
+    
         // Réinitialiser l'arbre
         this.isDestroyed = false
         this.isBeingHit = false
         this.hitCount = 0
         this.setVisible(true)
         this.play('tree-idle')
-
+    
         // Réinitialiser la profondeur
         this.setDepth(10)
-
+    
         // Vérifier si le joueur est déjà dans la zone après le respawn
         if (this.player && this.scene && this.detectionZone) {
             const overlap = this.scene.physics.overlap(this.player, this.detectionZone)
@@ -353,6 +466,32 @@ export class Tree extends Phaser.Physics.Arcade.Sprite {
         
         this.currentHealth = this.maxHealth
         this.updateHealthBar()
+    
+        // Mettre à jour la grille de pathfinding quand l'arbre repousse
+        if (this.scene) {
+            (this.scene as any).rebuildPathfindingGrid();
+        }
+    }
+
+    public findNearestInteractionPoint(playerX: number, playerY: number): { x: number, y: number } {
+        const tileSize = 16; // Taille d'une tuile
+        
+        // Position de l'arbre en tuiles
+        const treeTileX = Math.floor(this.x / tileSize);
+        const treeTileY = Math.floor(this.y / tileSize);
+        
+        // Positions possibles (gauche et droite de l'arbre)
+        const positions = [
+            { x: (treeTileX - 1) * tileSize, y: treeTileY * tileSize }, // Gauche
+            { x: (treeTileX + 1) * tileSize, y: treeTileY * tileSize }  // Droite
+        ];
+        
+        // Trouver la position la plus proche du joueur
+        return positions.reduce((closest, current) => {
+            const currentDist = Phaser.Math.Distance.Between(playerX, playerY, current.x, current.y);
+            const closestDist = Phaser.Math.Distance.Between(playerX, playerY, closest.x, closest.y);
+            return currentDist < closestDist ? current : closest;
+        });
     }
 
     private async performHit(): Promise<void> {

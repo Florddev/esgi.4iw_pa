@@ -27,6 +27,14 @@ export class BuildingManager {
         
         this.buildings.push(building);
         this.saveState();
+    
+        // Mettre à jour la grille de pathfinding après le placement
+        if (this.scene instanceof Phaser.Scene) {
+            // S'assurer que la scène a la méthode rebuildPathfindingGrid
+            if ((this.scene as any).rebuildPathfindingGrid) {
+                (this.scene as any).rebuildPathfindingGrid();
+            }
+        }
         
         return building;
     }
@@ -51,20 +59,35 @@ export class BuildingManager {
     public loadState(): void {
         const stored = sessionStorage.getItem(this.STORAGE_KEY);
         if (!stored) return;
-        
+      
         try {
-            const state: StoredBuilding[] = JSON.parse(stored);
-            state.forEach(data => {
-                this.placeBuilding(data.type, data.x, data.y);
-            });
+          const state: StoredBuilding[] = JSON.parse(stored);
+          state.forEach(data => {
+            this.placeBuilding(data.type, data.x, data.y);
+          });
+          
+          // Après avoir chargé tous les bâtiments, on met à jour la grille de pathfinding
+          if (this.scene instanceof Phaser.Scene) {
+            (this.scene as any).rebuildPathfindingGrid();
+          }
         } catch (error) {
-            console.error('Erreur lors du chargement des bâtiments:', error);
+          console.error('Erreur chargement bâtiments:', error);
         }
-    }
+      }
+
+    public getBuildings(): TiledBuilding[] {
+        return this.buildings;
+    }      
     
+
     public clearAll(): void {
         this.buildings.forEach(building => building.destroy());
         this.buildings = [];
         sessionStorage.removeItem(this.STORAGE_KEY);
+        
+        // Mettre à jour la grille de pathfinding après avoir supprimé tous les bâtiments
+        if (this.scene instanceof Phaser.Scene) {
+            (this.scene as any).rebuildPathfindingGrid();
+        }
     }
 }

@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "axios": "^1.7.9",
+    "easystarjs": "^0.4.4",
     "phaser": "^3.87.0",
     "pinia": "^2.3.1",
     "vue": "^3.5.13",
