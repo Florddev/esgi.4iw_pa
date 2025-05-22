@@ -1,5 +1,5 @@
 import { Scene } from 'phaser'
-import EasyStar from 'easystarjs'  
+import EasyStar from 'easystarjs'
 import { Player } from '../objects/Player'
 import { Tree } from '../objects/Tree';
 import { DialogService } from '../services/DialogService';
@@ -8,6 +8,11 @@ import { Building } from '../objects/Building';
 import { BuildingManager } from '../services/BuildingManager';
 import { TiledBuildingPreview } from '../objects/TiledBuildingPreview';
 import type { TiledBuilding } from '../objects/TiledBuilding';
+import { WorkerManager } from '../services/WorkerManager';
+import { Lumberjack } from '../objects/workers/Lumberjack';
+import { PlayerInventory } from '../services/PlayerInventory';
+import { ResourceManager } from '../services/ResourceManager';
+import { ResourceType } from '../types/ResourceTypes';
 
 interface LayerConfig {
   layer: Phaser.Tilemaps.TilemapLayer;
@@ -33,10 +38,14 @@ export class MainScene extends Scene {
   private resources = {
     wood: 0
   };
-  private easyStar: EasyStar.js;     
-  private tileWidth: number = 16;    
+  private easyStar: EasyStar.js;
+  private tileWidth: number = 16;
   private tileHeight: number = 16;
   private baseGrid: number[][] = [];
+  public playerInventory!: PlayerInventory;
+  private resourceManager!: ResourceManager;
+
+  private workerManager!: WorkerManager;
 
   constructor() {
     super({ key: 'MainScene' })
@@ -45,37 +54,41 @@ export class MainScene extends Scene {
 
   preload() {
     this.load.setBaseURL('/assets/')
+    
+    // Utiliser le ResourceManager pour charger les textures des ressources
+    const resourceManager = ResourceManager.getInstance();
+    resourceManager.prepareSceneLoading(this);
+
+    // Ensuite charger les autres assets
     this.load.spritesheet('player-walk', 'sprites/player-walk.png', {
-      frameWidth: 96,
-      frameHeight: 64
+        frameWidth: 96,
+        frameHeight: 64
     });
     this.load.spritesheet('player-idle', 'sprites/player-idle.png', {
-      frameWidth: 96,
-      frameHeight: 64
+        frameWidth: 96,
+        frameHeight: 64
     });
     this.load.spritesheet('player-chop', 'sprites/player-chop.png', {
-      frameWidth: 96,
-      frameHeight: 64
+        frameWidth: 96,
+        frameHeight: 64
     });
     this.load.spritesheet('leaves-hit', 'sprites/leaves-hit.png', {
-      frameWidth: 64,
-      frameHeight: 32
+        frameWidth: 64,
+        frameHeight: 32
     });
     this.load.spritesheet('tree', 'sprites/tree.png', {
-      frameWidth: 32,
-      frameHeight: 34
+        frameWidth: 32,
+        frameHeight: 34
     });
     this.load.spritesheet('health-bar', 'ui/health-bar.png', {
-      frameWidth: 21,
-      frameHeight: 13
+        frameWidth: 21,
+        frameHeight: 13
     });
     this.load.image('tiles', 'tilesets/tileset.png')
     this.load.tilemapTiledJSON('map', 'maps/map.json')
     this.load.image('action-button', 'ui/action-button.png')
     this.load.image('cursor', 'ui/cursor.png')
     this.load.image('cursor-chopping', 'ui/cursor-chopping.png')
-
-
 
     this.load.image('house', 'buildings/house.png');
     this.load.image('sawmill', 'buildings/sawmill.png');
@@ -150,6 +163,26 @@ export class MainScene extends Scene {
     // Création du joueur avant les layers qui doivent apparaître au-dessus
     this.player = new Player(this, 830, 700)
     this.player.setScale(1)
+
+    // Initialiser le gestionnaire de ressources et l'inventaire
+    this.resourceManager = ResourceManager.getInstance();
+    this.playerInventory = new PlayerInventory();
+
+    // Lancer l'UI des ressources
+    this.scene.launch('ResourceUI');
+
+    // Écouter l'événement d'ajout de bois (adapter pour le nouveau système)
+    this.events.on('addWood', (amount: number) => {
+      const added = this.playerInventory.addResource(ResourceType.WOOD, amount);
+
+      // Mettre à jour l'UI des ressources
+      const resourceUI = this.scene.get('ResourceUI') as any;
+      if (resourceUI) {
+        resourceUI.updateResourceDisplay();
+      }
+
+      console.log(`Ajouté ${added} bois. Total: ${this.playerInventory.getResource(ResourceType.WOOD)}`);
+    });
 
     // Création et configuration automatique des layers
     allLayers.forEach(layerData => {
@@ -265,14 +298,15 @@ export class MainScene extends Scene {
     }
 
     this.buildingManager = new BuildingManager(this);
+    this.workerManager = new WorkerManager(this);
     this.buildingManager.loadState();
-    this.rebuildPathfindingGrid(); 
+    this.rebuildPathfindingGrid();
 
     this.baseGrid = Array.from(
-      { length: this.map.height }, 
+      { length: this.map.height },
       () => Array(this.map.width).fill(0)
     );
-    
+
     // Parcourt chaque layer ayant hasCollision = true
     this.mapLayers.forEach((layerConfig) => {
       if (!layerConfig.hasCollision) return; // On ignore ceux sans collision
@@ -281,25 +315,25 @@ export class MainScene extends Scene {
         for (let x = 0; x < this.map.width; x++) {
           const tile = layer.getTileAt(x, y);
           if (!tile) continue;
-          
+
           // Premier critère : la propriété "collides" au niveau de la tuile
           const hasCollidesProp = !!(tile.properties && tile.properties.collides);
-    
+
           // Deuxième critère : objectgroup dans le tileset (collision shapes)
           const tileData = tile.tileset.getTileData(tile.index);
-          const hasCollisionShapes = tileData 
-              && tileData.objectgroup 
-              && tileData.objectgroup.objects 
-              && tileData.objectgroup.objects.length > 0;
-    
+          const hasCollisionShapes = tileData
+            && tileData.objectgroup
+            && tileData.objectgroup.objects
+            && tileData.objectgroup.objects.length > 0;
+
           if (hasCollidesProp || hasCollisionShapes) {
             this.baseGrid[y][x] = 1; // On marque la tuile comme bloquée
           }
         }
       }
     });
-    
-    
+
+
     // Ensuite on assigne cette grille globale à easystar
     const fullGrid = this.copyGrid(this.baseGrid);
     this.easyStar.setGrid(fullGrid);
@@ -315,11 +349,11 @@ export class MainScene extends Scene {
       const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
       let targetTileX = Math.floor(worldPoint.x / this.tileWidth);
       let targetTileY = Math.floor(worldPoint.y / this.tileHeight);
-    
+
       // Récupérer la position "tuile" du joueur
       const playerTileX = Math.floor(this.player.x / this.tileWidth);
       const playerTileY = Math.floor(this.player.y / this.tileHeight);
-    
+
       // Si la tuile cible a une collision, chercher la plus proche tuile accessible
       if (this.baseGrid[targetTileY][targetTileX] === 1) {
         const nearestTile = this.findNearestWalkableTile(targetTileX, targetTileY);
@@ -331,7 +365,7 @@ export class MainScene extends Scene {
           return;
         }
       }
-    
+
       // Calculer un chemin avec EasyStar
       this.easyStar.findPath(
         playerTileX,
@@ -346,11 +380,29 @@ export class MainScene extends Scene {
           }
         }
       );
-    
+
       this.easyStar.calculate();
     });
 
     this.rebuildPathfindingGrid()
+  }
+
+  // Méthode utilitaire pour ajouter des ressources
+  public addResource(type: ResourceType, amount: number): void {
+    const added = this.playerInventory.addResource(type, amount);
+
+    // Mettre à jour l'UI
+    const resourceUI = this.scene.get('ResourceUI') as any;
+    if (resourceUI) {
+      resourceUI.updateResourceDisplay();
+    }
+
+    // Émettre un événement pour les autres systèmes
+    this.events.emit('resourceChanged', type, this.playerInventory.getResource(type));
+  }
+
+  public createLumberjack(x: number, y: number, depositPoint?: { x: number, y: number }): void {
+    this.workerManager.createLumberjack(x, y, depositPoint);
   }
 
   private copyGrid(source: number[][]): number[][] {
@@ -360,72 +412,72 @@ export class MainScene extends Scene {
 
   private rebuildPathfindingGrid() {
     const fullGrid = this.copyGrid(this.baseGrid);
-  
+
     // Ajouter les collisions des bâtiments
     this.buildingManager.getBuildings().forEach(building => {
-        const { x, y } = building.getPosition();
-        const { tilesWidth, tilesHeight } = building.getDimensions();
-    
-        // Convertir en indices de tuiles
-        const tileX = Math.floor(x / this.tileWidth);
-        const tileY = Math.floor(y / this.tileHeight);
-    
-        // Récupérer la sub-map Tiled du bâtiment
-        const buildingMap = building.getMap();
-        
-        buildingMap.layers.forEach(layerData => {
-            const layer = buildingMap.getLayer(layerData.name);
-            if (!layer) return;
+      const { x, y } = building.getPosition();
+      const { tilesWidth, tilesHeight } = building.getDimensions();
 
-            for (let ty = 0; ty < layer.tilemapLayer.layer.height; ty++) {
-                for (let tx = 0; tx < layer.tilemapLayer.layer.width; tx++) {
-                    const tile = layer.tilemapLayer.getTileAt(tx, ty);
-                    if (!tile) continue;
+      // Convertir en indices de tuiles
+      const tileX = Math.floor(x / this.tileWidth);
+      const tileY = Math.floor(y / this.tileHeight);
 
-                    const hasCollidesProp = !!(tile.properties && tile.properties.collides);
-                    const tileData = tile.tileset.getTileData(tile.index);
-                    const hasCollisionShapes = tileData 
-                        && tileData.objectgroup 
-                        && tileData.objectgroup.objects 
-                        && tileData.objectgroup.objects.length > 0;
+      // Récupérer la sub-map Tiled du bâtiment
+      const buildingMap = building.getMap();
 
-                    if (hasCollidesProp || hasCollisionShapes) {
-                        const gx = tileX + tx;
-                        const gy = tileY + ty;
+      buildingMap.layers.forEach(layerData => {
+        const layer = buildingMap.getLayer(layerData.name);
+        if (!layer) return;
 
-                        if (gy >= 0 && gy < fullGrid.length && gx >= 0 && gx < fullGrid[0].length) {
-                            fullGrid[gy][gx] = 1;
-                        }
-                    }
-                }
+        for (let ty = 0; ty < layer.tilemapLayer.layer.height; ty++) {
+          for (let tx = 0; tx < layer.tilemapLayer.layer.width; tx++) {
+            const tile = layer.tilemapLayer.getTileAt(tx, ty);
+            if (!tile) continue;
+
+            const hasCollidesProp = !!(tile.properties && tile.properties.collides);
+            const tileData = tile.tileset.getTileData(tile.index);
+            const hasCollisionShapes = tileData
+              && tileData.objectgroup
+              && tileData.objectgroup.objects
+              && tileData.objectgroup.objects.length > 0;
+
+            if (hasCollidesProp || hasCollisionShapes) {
+              const gx = tileX + tx;
+              const gy = tileY + ty;
+
+              if (gy >= 0 && gy < fullGrid.length && gx >= 0 && gx < fullGrid[0].length) {
+                fullGrid[gy][gx] = 1;
+              }
             }
-        });
+          }
+        }
+      });
     });
 
     // Ajouter les collisions des arbres (vivants ou souches)
     this.trees.forEach(tree => {
-        // Récupérer la position en tuiles
-        const pos = tree.getTreeTilePosition();
+      // Récupérer la position en tuiles
+      const pos = tree.getTreeTilePosition();
 
-        // Si l'entité bloque le passage (arbre ou souche)
-        if (tree.isBlockingPath()) {
-            // Ajouter la collision dans la grille
-            if (pos.y >= 0 && pos.y < fullGrid.length && 
-                pos.x >= 0 && pos.x < fullGrid[0].length) {
-                fullGrid[pos.y][pos.x] = 1;
-            }
+      // Si l'entité bloque le passage (arbre ou souche)
+      if (tree.isBlockingPath()) {
+        // Ajouter la collision dans la grille
+        if (pos.y >= 0 && pos.y < fullGrid.length &&
+          pos.x >= 0 && pos.x < fullGrid[0].length) {
+          fullGrid[pos.y][pos.x] = 1;
         }
+      }
     });
-  
+
     this.easyStar.setGrid(fullGrid);
-}
-  
-  private showResourceError(): void {
+  }
+
+  public showResourceError(message: string = 'Ressources insuffisantes!'): void {
     // Afficher un message d'erreur temporaire
     const text = this.add.text(
       this.cameras.main.centerX,
       100,
-      'Ressources insuffisantes!',
+      message,
       {
         fontSize: '24px',
         color: '#ff0000',
@@ -505,130 +557,130 @@ export class MainScene extends Scene {
 
   private markBuildingCollisions(building: TiledBuilding) {
     // Récupérer la sub-map Tiled du bâtiment
-    const buildingMap = building.getMap(); 
+    const buildingMap = building.getMap();
     // Borne en tuiles dans la map principale
     const offsetX = Math.floor(building.getPosition().x / this.tileWidth);
     const offsetY = Math.floor(building.getPosition().y / this.tileHeight);
-  
+
     // Pour chaque layer du buildingMap
     buildingMap.layers.forEach(layerData => {
       // Récupérer l'objet layer
       const layer = buildingMap.getLayer(layerData.name);
       if (!layer) return;
-  
+
       // Parcourir toutes les tuiles
       for (let ty = 0; ty < layer.tilemapLayer.layer.height; ty++) {
         for (let tx = 0; tx < layer.tilemapLayer.layer.width; tx++) {
           const tile = layer.tilemapLayer.getTileAt(tx, ty);
           if (!tile) continue;
-  
+
           // Si la tuile du bâtiment est bloquante
           const hasCollidesProp = !!(tile.properties && tile.properties.collides);
           const tileData = tile.tileset.getTileData(tile.index);
-          const hasCollisionShapes = tileData 
-              && tileData.objectgroup 
-              && tileData.objectgroup.objects 
-              && tileData.objectgroup.objects.length > 0;
-  
+          const hasCollisionShapes = tileData
+            && tileData.objectgroup
+            && tileData.objectgroup.objects
+            && tileData.objectgroup.objects.length > 0;
+
           if (hasCollidesProp || hasCollisionShapes) {
             // On convertit en coord. de la map globale
             const gx = offsetX + tx;
             const gy = offsetY + ty;
-  
+
             // On marque dans baseGrid
             if (
               gy >= 0 && gy < this.baseGrid.length &&
               gx >= 0 && gx < this.baseGrid[0].length
             ) {
-              this.baseGrid[gy][gx] = 1; 
+              this.baseGrid[gy][gx] = 1;
             }
           }
         }
       }
     });
   }
-  
+
 
   private checkPlacementValidity(worldPoint: Phaser.Math.Vector2): void {
     if (!this.buildingPreview || !this.map) return;
 
     const tileX = Math.floor(worldPoint.x / 16);
     const tileY = Math.floor(worldPoint.y / 16);
-    
-    const { tilesWidth, tilesHeight } = this.buildingPreview.getDimensions();
-    
-    let isValid = true;
-    
-    // 1. Vérifier les limites de la carte
-    if (tileX < 0 || tileY < 0 || 
-        tileX + tilesWidth > this.map.width || 
-        tileY + tilesHeight > this.map.height) {
-        isValid = false;
-    } else {
-        // 2. Vérifier les collisions pour chaque tile dans la zone
-        for (let x = 0; x < tilesWidth; x++) {
-            for (let y = 0; y < tilesHeight; y++) {
-                const currentTileX = tileX + x;
-                const currentTileY = tileY + y;
-                
-                // Vérifier chaque layer
-                for (const [layerName, config] of this.mapLayers.entries()) {
-                    const layer = config.layer;
-                    const tile = layer.getTileAt(currentTileX, currentTileY);
-                    
-                    if (tile) {
-                        // Vérifier les collisions standards (propriété collides)
-                        if (config.hasCollision && tile.properties && tile.properties.collides) {
-                            isValid = false;
-                            break;
-                        }
 
-                        // Vérifier si le tile a une collision personnalisée
-                        if (tile.tileset) {  // Vérifier que le tile a un tileset
-                            const customCollisions = tile.tileset.getTileData(tile.index);
-                            if (customCollisions && customCollisions.objectgroup) {
-                                isValid = false;
-                                break;
-                            }
-                        }
-                    }
+    const { tilesWidth, tilesHeight } = this.buildingPreview.getDimensions();
+
+    let isValid = true;
+
+    // 1. Vérifier les limites de la carte
+    if (tileX < 0 || tileY < 0 ||
+      tileX + tilesWidth > this.map.width ||
+      tileY + tilesHeight > this.map.height) {
+      isValid = false;
+    } else {
+      // 2. Vérifier les collisions pour chaque tile dans la zone
+      for (let x = 0; x < tilesWidth; x++) {
+        for (let y = 0; y < tilesHeight; y++) {
+          const currentTileX = tileX + x;
+          const currentTileY = tileY + y;
+
+          // Vérifier chaque layer
+          for (const [layerName, config] of this.mapLayers.entries()) {
+            const layer = config.layer;
+            const tile = layer.getTileAt(currentTileX, currentTileY);
+
+            if (tile) {
+              // Vérifier les collisions standards (propriété collides)
+              if (config.hasCollision && tile.properties && tile.properties.collides) {
+                isValid = false;
+                break;
+              }
+
+              // Vérifier si le tile a une collision personnalisée
+              if (tile.tileset) {  // Vérifier que le tile a un tileset
+                const customCollisions = tile.tileset.getTileData(tile.index);
+                if (customCollisions && customCollisions.objectgroup) {
+                  isValid = false;
+                  break;
                 }
-                
-                if (!isValid) break;
-                
-                // 3. Vérifier les collisions avec les autres bâtiments
-                const hasBuildingCollision = this.buildings.some(building => {
-                    const pos = building.getPosition();
-                    const buildingTileX = Math.floor(pos.x / 16);
-                    const buildingTileY = Math.floor(pos.y / 16);
-                    const dims = building.getDimensions();
-                    
-                    return currentTileX >= buildingTileX && 
-                           currentTileX < buildingTileX + dims.tilesWidth &&
-                           currentTileY >= buildingTileY && 
-                           currentTileY < buildingTileY + dims.tilesHeight;
-                });
-                
-                if (hasBuildingCollision) {
-                    isValid = false;
-                    break;
-                }
+              }
             }
-            if (!isValid) break;
+          }
+
+          if (!isValid) break;
+
+          // 3. Vérifier les collisions avec les autres bâtiments
+          const hasBuildingCollision = this.buildings.some(building => {
+            const pos = building.getPosition();
+            const buildingTileX = Math.floor(pos.x / 16);
+            const buildingTileY = Math.floor(pos.y / 16);
+            const dims = building.getDimensions();
+
+            return currentTileX >= buildingTileX &&
+              currentTileX < buildingTileX + dims.tilesWidth &&
+              currentTileY >= buildingTileY &&
+              currentTileY < buildingTileY + dims.tilesHeight;
+          });
+
+          if (hasBuildingCollision) {
+            isValid = false;
+            break;
+          }
         }
+        if (!isValid) break;
+      }
     }
-    
+
     // Debug en mode développement
     if (process.env.NODE_ENV === 'development') {
-        const worldTileX = Math.floor(worldPoint.x / 16);
-        const worldTileY = Math.floor(worldPoint.y / 16);
-        console.debug('Placement check:', {
-            position: { x: worldTileX, y: worldTileY },
-            isValid,
-            reason: !isValid ? 'Collision detected' : 'Valid placement'
-        });
+      const worldTileX = Math.floor(worldPoint.x / 16);
+      const worldTileY = Math.floor(worldPoint.y / 16);
+      console.debug('Placement check:', {
+        position: { x: worldTileX, y: worldTileY },
+        isValid,
+        reason: !isValid ? 'Collision detected' : 'Valid placement'
+      });
     }
-    
+
     this.buildingPreview.setValidPlacement(isValid);
   }
 
@@ -653,7 +705,7 @@ export class MainScene extends Scene {
 
   private placeBuilding(pointer: Phaser.Input.Pointer): void {
     if (!this.buildingPreview || !this.selectedBuildingType) return;
-  
+
     if (this.buildingPreview.isValidPlacement()) {
       const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
       const snappedX = Math.floor(worldPoint.x / 16) * 16;
@@ -661,31 +713,31 @@ export class MainScene extends Scene {
 
       // Placer le bâtiment une seule fois
       const newBuilding = this.buildingManager.placeBuilding(
-        this.selectedBuildingType, 
-        snappedX, 
+        this.selectedBuildingType,
+        snappedX,
         snappedY
       );
 
       // Marquer les collisions et mettre à jour la grille de pathfinding
       this.markBuildingCollisions(newBuilding);
       this.rebuildPathfindingGrid();
-  
+
       // Réinitialiser l'aperçu 
       this.buildingPreview.destroy();
       this.buildingPreview = null;
       this.selectedBuildingType = null;
-  
+
       // Restaurer le curseur
       if (this.uiScene) {
         this.uiScene.defaultCursor.setVisible(true);
       }
     }
   }
-  
+
   private findNearestWalkableTile(targetX: number, targetY: number): { x: number, y: number } | null {
     // Distance maximale de recherche
     const maxSearchDistance = 5;
-    
+
     // Explorer en spirale autour du point cible
     for (let d = 1; d <= maxSearchDistance; d++) {
       // Vérifier toutes les tuiles à la distance d
@@ -695,11 +747,11 @@ export class MainScene extends Scene {
           if (Math.abs(offsetX) === d || Math.abs(offsetY) === d) {
             const checkX = targetX + offsetX;
             const checkY = targetY + offsetY;
-            
+
             // Vérifier que la tuile est dans les limites de la map
-            if (checkX >= 0 && checkX < this.map.width && 
-                checkY >= 0 && checkY < this.map.height) {
-              
+            if (checkX >= 0 && checkX < this.map.width &&
+              checkY >= 0 && checkY < this.map.height) {
+
               // Vérifier si la tuile est marchable (= 0 dans notre grille)
               if (this.baseGrid[checkY][checkX] === 0) {
                 return { x: checkX, y: checkY };
@@ -709,7 +761,7 @@ export class MainScene extends Scene {
         }
       }
     }
-    
+
     return null; // Aucune tuile marchable trouvée dans le rayon de recherche
   }
 
@@ -753,5 +805,6 @@ export class MainScene extends Scene {
     this.trees.forEach(tree => tree.update())
     this.trees = this.trees.filter(tree => tree.scene)
     this.buildingManager.updateBuildings(this.player);
+    this.workerManager.updateWorkers();
   }
 }

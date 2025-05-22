@@ -1,6 +1,8 @@
 import { Types } from 'phaser'
 import { MainScene } from './scenes/MainScene'
 import { BuildingUI } from './ui/BuildingUI'
+import { BuildingInfoUI } from './ui/BuildingInfoUI'
+import { ResourceUI } from './ui/ResourceUI'
 
 export const gameConfig: Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -22,6 +24,6 @@ export const gameConfig: Types.Core.GameConfig = {
     height: '100%',
     autoCenter: Phaser.Scale.CENTER_BOTH
   },
-  scene: [MainScene, BuildingUI],
+  scene: [MainScene, BuildingUI, BuildingInfoUI, ResourceUI],
   backgroundColor: '#000000'
 }
