@@ -54,7 +54,7 @@ export abstract class Worker extends Phaser.Physics.Arcade.Sprite {
 
     // Inventory and resources
     protected readonly inventory = new Map<ResourceType, number>()
-    protected targetResource: any = null
+    protected targetResource: ResourceEntity | null = null
     protected targetStorage: any = null
     protected readonly depositPoint: WorkerPosition | null = null
 

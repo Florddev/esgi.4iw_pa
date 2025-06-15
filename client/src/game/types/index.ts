@@ -1,4 +1,3 @@
-// Resource types
 export {
     ResourceType,
     ResourceCategory,
@@ -12,7 +11,8 @@ export {
     createResourceStorage
 } from './ResourceTypes';
 
-// Building types  
+export * from './ResourceEntityTypes';
+
 export {
     BuildingCategory,
     type BuildingConfig,
@@ -25,7 +25,6 @@ export {
     canAffordBuilding
 } from './BuildingTypes';
 
-// Player inventory types
 export {
     type PlayerInventory,
     type PlayerInventoryOperations,
@@ -35,7 +34,6 @@ export {
     type InventoryEventCallback
 } from './PlayerInventory';
 
-// Worker types
 export {
     WorkerState,
     WorkerType,
@@ -50,7 +48,6 @@ export {
     createWorkerStats
 } from './WorkerTypes';
 
-// Common utility types
 export interface Position {
     readonly x: number;
     readonly y: number;
@@ -72,7 +69,6 @@ export interface GameEntity {
     readonly position: Position;
 }
 
-// Game state types
 export interface GameSaveData {
     readonly version: string;
     readonly timestamp: number;
@@ -85,14 +81,12 @@ export interface GameSaveData {
     readonly resources: Record<string, number>;
 }
 
-// Event types
 export interface GameEvent<T = any> {
     readonly type: string;
     readonly data: T;
     readonly timestamp: number;
 }
 
-// Configuration types
 export interface GameConfig {
     readonly debug: boolean;
     readonly autoSave: boolean;
@@ -101,7 +95,6 @@ export interface GameConfig {
     readonly maxBuildings: number;
 }
 
-// Type utilities
 export type DeepReadonly<T> = {
     readonly [P in keyof T]: T[P] extends object ? DeepReadonly<T[P]> : T[P];
 };

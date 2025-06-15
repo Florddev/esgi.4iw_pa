@@ -4,11 +4,22 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="11ffd018-9421-4983-bf78-302c0d31060a" name="Changes" comment="" />
+    <list default="true" id="11ffd018-9421-4983-bf78-302c0d31060a" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/objects/Tree.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/objects/workers/Lumberjack.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/objects/workers/Lumberjack.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/objects/workers/Worker.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/objects/workers/Worker.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/scenes/MainScene.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/scenes/MainScene.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/services/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/services/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/types/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/types/index.ts" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ComposerSettings">
+    <execution />
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -20,6 +31,10 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="PhpWorkspaceProjectConfiguration" interpreter_name="C:\wamp64\bin\php\php7.4.9\php.exe" />
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 1
 }</component>
@@ -31,26 +46,42 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;core/refactoring&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;ts.external.directory.path&quot;: &quot;C:\\Users\\flori\\OneDrive\\Documents\\Web Development\\Github\\Florddev\\esgi.4iw_pa\\client\\node_modules\\typescript\\lib&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "git-widget-placeholder": "core/refactoring",
+    "last_opened_file_path": "D:/Education/Ingénierie du web/IW4/Projet annuel/TinyTown",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "prettierjs.PrettierConfiguration.Package": "D:\\Education\\Ingénierie du web\\IW4\\Projet annuel\\TinyTown\\server\\node_modules\\prettier",
+    "ts.external.directory.path": "D:\\Education\\Ingénierie du web\\IW4\\Projet annuel\\TinyTown\\server\\node_modules\\typescript\\lib",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\Users\flori\OneDrive\Documents\Web Development\Github\Florddev\esgi.4iw_pa\client\src\game\scenes" />
       <recent name="C:\Users\flori\OneDrive\Documents\Web Development\Github\Florddev\esgi.4iw_pa\client\src\game\entities" />
       <recent name="C:\Users\flori\OneDrive\Documents\Web Development\Github\Florddev\esgi.4iw_pa\client\src\game" />
     </key>
+  </component>
+  <component name="RunManager">
+    <configuration name="dev" type="js.build_tools.npm" nameIsGenerated="true">
+      <package-json value="$PROJECT_DIR$/client/package.json" />
+      <command value="run" />
+      <scripts>
+        <script value="dev" />
+      </scripts>
+      <node-interpreter value="project" />
+      <envs />
+      <method v="2" />
+    </configuration>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
@@ -70,6 +101,7 @@
       <workItem from="1743425043263" duration="4155000" />
       <workItem from="1743432038621" duration="1425000" />
       <workItem from="1743533198107" duration="2449000" />
+      <workItem from="1749995132430" duration="3427000" />
     </task>
     <servers />
   </component>

@@ -17,6 +17,9 @@ export {
     type DialogStyle 
 } from './DialogService'
 
+export { ResourceEntityRegistry } from './ResourceEntityRegistry';
+export { ResourceEntityManager } from './ResourceEntityManager';
+
 // Export animation utilities
 export { AnimationUtils } from '../utils/AnimationUtils'
 

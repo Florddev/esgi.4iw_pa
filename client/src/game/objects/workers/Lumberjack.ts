@@ -4,7 +4,7 @@ import { WorkerRegistry } from '../../services/WorkerRegistry'
 import { WorkerType } from '../../types'
 import { AnimationType } from '../../services/AnimationRegistry'
 import { AnimationUtils } from '../../utils/AnimationUtils'
-import type { Tree } from '../Tree'
+import type { ResourceEntity } from '../ResourceEntity'
 import type { TiledBuilding } from '../TiledBuilding'
 import { ResourceType as GameResourceType } from '../../types/index'
 
@@ -16,7 +16,7 @@ interface WorkerPosition {
 interface HarvestingState {
     inProgress: boolean
     startTime: number
-    target: Tree | null
+    target: ResourceEntity | null
 }
 
 export class Lumberjack extends Worker {
@@ -66,54 +66,59 @@ export class Lumberjack extends Worker {
         })
     }
 
-    protected findNearestResource(): Tree | null {
+    protected findNearestResource(): ResourceEntity | null {
         const mainScene = this.scene as any
-        
-        if (!mainScene.trees?.length) {
+
+        if (!mainScene.resourceEntityManager) {
+            return null
+        }
+
+        const trees = mainScene.resourceEntityManager.getEntitiesByType('tree')
+        if (!trees.length) {
             return null
         }
 
         this.cleanupBlacklist()
 
-        const availableTrees = this.getAvailableTrees(mainScene.trees)
-        
+        const availableTrees = this.getAvailableTrees(trees)
+
         if (availableTrees.length === 0) {
-            return this.expandSearchRadius(mainScene.trees)
+            return this.expandSearchRadius(trees)
         }
 
         return this.selectOptimalTree(availableTrees)
     }
 
-    private getAvailableTrees(allTrees: Tree[]): Tree[] {
+    private getAvailableTrees(allTrees: ResourceEntity[]): ResourceEntity[] {
         const workRadius = this.config.workRadius || 500
         
-        return allTrees.filter(tree => {
+        return allResourceEntitys.filter(tree => {
             const distance = Phaser.Math.Distance.Between(this.x, this.y, tree.x, tree.y)
             const tileKey = this.getTileKey(tree.x, tree.y)
             
             return !this.blacklistedTiles.has(tileKey) &&
-                   tree.isAvailableForHarvest(this) &&
+                   entity.isAvailableForHarvest(this) &&
                    distance <= workRadius
         })
     }
 
-    private expandSearchRadius(allTrees: Tree[]): Tree | null {
+    private expandSearchRadius(allResourceEntitys: ResourceEntity[]): ResourceEntity | null {
         console.log('Lumberjack: Expanding search radius')
         
         const extendedRadius = (this.config.workRadius || 500) * 1.5
-        const extendedTrees = allTrees.filter(tree => {
+        const extendedResourceEntitys = allResourceEntitys.filter(tree => {
             const distance = Phaser.Math.Distance.Between(this.x, this.y, tree.x, tree.y)
             const tileKey = this.getTileKey(tree.x, tree.y)
             
             return !this.blacklistedTiles.has(tileKey) &&
-                   tree.isAvailableForHarvest(this) &&
+                   entity.isAvailableForHarvest(this) &&
                    distance <= extendedRadius
         })
 
-        return extendedTrees.length > 0 ? this.selectOptimalTree(extendedTrees) : null
+        return extendedResourceEntitys.length > 0 ? this.selectOptimalResourceEntity(extendedResourceEntitys) : null
     }
 
-    private selectOptimalTree(trees: Tree[]): Tree | null {
+    private selectOptimalResourceEntity(trees: ResourceEntity[]): ResourceEntity | null {
         // Sort by distance
         trees.sort((a, b) => {
             const distA = Phaser.Math.Distance.Between(this.x, this.y, a.x, a.y)
@@ -126,7 +131,7 @@ export class Lumberjack extends Worker {
         
         for (let i = 0; i < candidateCount; i++) {
             const tree = trees[i]
-            if (tree.setHarvester(this)) {
+            if (entity.setHarvester(this)) {
                 return tree
             }
         }
@@ -230,7 +235,7 @@ export class Lumberjack extends Worker {
 
     private handleHarvestResult(treeDestroyed: boolean): void {
         if (treeDestroyed) {
-            console.log('Lumberjack: Tree destroyed')
+            console.log('Lumberjack: ResourceEntity destroyed')
             this.addWoodToInventory()
         }
 
@@ -239,8 +244,8 @@ export class Lumberjack extends Worker {
     }
 
     private addWoodToInventory(): void {
-        const woodPerTree = 3 // Could be configurable or from registry
-        const woodAdded = this.addToInventory('wood', woodPerTree)
+        const woodPerResourceEntity = 3 // Could be configurable or from registry
+        const woodAdded = this.addToInventory('wood', woodPerResourceEntity)
         console.log(`Lumberjack: ${woodAdded} wood added. Total: ${this.inventory.get('wood')}`)
         this.updateInventoryDisplay()
     }
@@ -344,13 +349,13 @@ export class Lumberjack extends Worker {
         }
     }
 
-    protected findInteractionPoint(tree: Tree): WorkerPosition {
+    protected findInteractionPoint(tree: ResourceEntity): WorkerPosition {
         if (!tree?.findNearestInteractionPoint) {
-            console.warn('Lumberjack: Tree does not have findNearestInteractionPoint method')
+            console.warn('Lumberjack: ResourceEntity does not have findNearestInteractionPoint method')
             return { x: tree.x, y: tree.y }
         }
         
-        return tree.findNearestInteractionPoint(this.x, this.y)
+        return entity.findNearestInteractionPoint(this.x, this.y)
     }
 
     protected findStoragePoint(storage: TiledBuilding): WorkerPosition {
@@ -413,7 +418,7 @@ export class Lumberjack extends Worker {
         return this.harvestingState.inProgress
     }
 
-    public getCurrentTarget(): Tree | null {
+    public getCurrentTarget(): ResourceEntity | null {
         return this.harvestingState.target
     }
 

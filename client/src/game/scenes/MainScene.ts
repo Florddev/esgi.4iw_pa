@@ -16,6 +16,7 @@ import { ResourceType } from '../types/ResourceTypes'
 import { BuildingRegistry } from '../services/BuildingRegistry'
 import { AnimationRegistry } from '../services/AnimationRegistry'
 import { AnimationUtils } from '../utils/AnimationUtils'
+import { ResourceEntityManager } from '../services/ResourceEntityManager'
 
 interface LayerConfig {
   layer: Phaser.Tilemaps.TilemapLayer
@@ -28,7 +29,6 @@ export class MainScene extends Scene {
   private player!: Player
   private map!: Phaser.Tilemaps.Tilemap
   private mapLayers: Map<string, LayerConfig> = new Map()
-  private trees: Tree[] = []
   private woodCount: number = 0
   private woodText!: Phaser.GameObjects.Text
   private dialogService!: DialogService
@@ -49,6 +49,7 @@ export class MainScene extends Scene {
   private resourceManager!: ResourceManager
   private buildingRegistry!: BuildingRegistry
   private animationRegistry!: AnimationRegistry
+  private resourceEntityManager!: ResourceEntityManager
 
   private workerManager!: WorkerManager
 
@@ -256,18 +257,16 @@ export class MainScene extends Scene {
       50,  // Approximate height
       0x000000,
       0.5
-    )
-      .setScrollFactor(0)
-      .setDepth(9998)      // Just below text
-
-    // Spawn trees from object layer
-    this.spawnTreesFromObjectLayer()
+    ).setScrollFactor(0).setDepth(9998)      // Just below text
 
     // Listen for wood addition event
     this.events.on('addWood', (amount: number) => {
       this.resources.wood += amount
       this.events.emit('resourcesUpdated', this.resources)
     })
+
+    this.resourceEntityManager = new ResourceEntityManager(this)
+    this.resourceEntityManager.spawnFromMap(this.map)
 
     this.game.events.on('selectBuilding', (buildingType: string) => {
       const buildingUI = this.scene.get('BuildingUI') as BuildingUI
@@ -684,16 +683,11 @@ export class MainScene extends Scene {
       })
     })
 
-    // Add tree collisions (living or stumps)
-    this.trees.forEach(tree => {
-      // Get position in tiles
-      const pos = tree.getTreeTilePosition()
-
-      // If entity blocks passage (tree or stump)
-      if (tree.isBlockingPath()) {
-        // Add collision to grid
+    this.resourceEntityManager.getAllEntities().forEach(entity => {
+      if (entity.isBlockingPath()) {
+        const pos = entity.getEntityTilePosition()
         if (pos.y >= 0 && pos.y < fullGrid.length &&
-          pos.x >= 0 && pos.x < fullGrid[0].length) {
+            pos.x >= 0 && pos.x < fullGrid[0].length) {
           fullGrid[pos.y][pos.x] = 1
         }
       }
@@ -724,43 +718,6 @@ export class MainScene extends Scene {
       duration: 2000,
       ease: 'Power2',
       onComplete: () => text.destroy()
-    })
-  }
-
-  private spawnTreesFromObjectLayer(): void {
-    const treeLayer = this.map.getObjectLayer('Trees')
-
-    if (!treeLayer) {
-      console.warn('No "Trees" object layer found in the map')
-      return
-    }
-
-    treeLayer.objects.forEach(obj => {
-      const tree = new Tree(
-        this,
-        obj.x! + (obj.width! / 2),
-        obj.y! - (obj.height!),
-        obj // Pass complete object for dimensions
-      )
-
-      tree.setupPlayerCollision(this.player)
-      this.trees.push(tree)
-
-      if (obj.properties) {
-        obj.properties.forEach(prop => {
-          switch (prop.name) {
-            case 'respawnTime':
-              tree.setRespawnTime(prop.value)
-              break
-            case 'woodValue':
-              tree.setWoodValue(prop.value)
-              break
-            case 'scale':
-              tree.setScale(prop.value)
-              break
-          }
-        })
-      }
     })
   }
 
@@ -1112,8 +1069,7 @@ export class MainScene extends Scene {
 
   update() {
     this.player.update()
-    this.trees.forEach(tree => tree.update())
-    this.trees = this.trees.filter(tree => tree.scene)
+    this.resourceEntityManager.updateEntities()
     this.buildingManager.updateBuildings(this.player)
     this.workerManager.updateWorkers()
   }
