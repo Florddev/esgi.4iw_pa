@@ -415,8 +415,7 @@ export class TiledBuilding {
     }
 
     private closeBuildingInterface(): void {
-        const buildingUI = this.scene.scene.get('BuildingInfoUI') as BuildingInfoUI;
-        buildingUI?.hideBuildingInfo();
+        window.dispatchEvent(new CustomEvent('game:hideBuildingInfo'));
     }
     
     private checkPlayerStationary(player: Phaser.Physics.Arcade.Sprite): void {
@@ -457,18 +456,14 @@ export class TiledBuilding {
         if (currentTime - this.lastInteractionTime < this.config.interactionCooldown) {
             return;
         }
-
+    
         this.lastInteractionTime = currentTime;
         console.log(`Opening interface for ${this.buildingType}`);
         
-        const buildingUI = this.scene.scene.get('BuildingInfoUI') as BuildingInfoUI;
-        
-        if (buildingUI) {
-            buildingUI.showBuildingInfo(this);
-        } else {
-            console.error('BuildingInfoUI scene not found!');
-            this.createBuildingUIScene();
-        }
+        // Émettre un événement pour Vue.js au lieu d'utiliser l'ancien système Phaser
+        window.dispatchEvent(new CustomEvent('game:buildingInfo', {
+            detail: { building: this }
+        }));
     }
 
     private createBuildingUIScene(): void {

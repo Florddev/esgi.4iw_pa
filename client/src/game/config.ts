@@ -1,13 +1,9 @@
 import { Types } from 'phaser'
 import { MainScene } from './scenes/MainScene'
-import { BuildingUI } from './ui/BuildingUI'
-import { BuildingInfoUI } from './ui/BuildingInfoUI'
-import { ResourceUI } from './ui/ResourceUI'
 
 export const gameConfig: Types.Core.GameConfig = {
   type: Phaser.AUTO,
   parent: 'game-container',
-  // Taille de base du jeu (sera redimensionnée)
   width: window.innerWidth,
   height: window.innerHeight,
   pixelArt: true,
@@ -19,11 +15,21 @@ export const gameConfig: Types.Core.GameConfig = {
     }
   },
   scale: {
-    mode: Phaser.Scale.RESIZE, // Redimensionne automatiquement
+    mode: Phaser.Scale.RESIZE,
     width: '100%',
     height: '100%',
     autoCenter: Phaser.Scale.CENTER_BOTH
   },
-  scene: [MainScene, BuildingUI, BuildingInfoUI, ResourceUI],
-  backgroundColor: '#000000'
+  // Only include MainScene - all UI is now handled by Vue.js
+  scene: [MainScene],
+  backgroundColor: '#000000',
+  // Disable default input cursor since we handle it in Vue
+  input: {
+    mouse: {
+      preventDefaultWheel: false,
+      preventDefaultDown: false,
+      preventDefaultUp: false,
+      preventDefaultMove: false
+    }
+  }
 }
