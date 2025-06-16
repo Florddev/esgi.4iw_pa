@@ -6,7 +6,7 @@ import { AnimationType } from '../../services/AnimationRegistry'
 import { AnimationUtils } from '../../utils/AnimationUtils'
 import type { ResourceEntity } from '../ResourceEntity'
 import type { TiledBuilding } from '../TiledBuilding'
-import { ResourceType as GameResourceType } from '../../types/index'
+import { ResourceType } from '../../types/ResourceSystemTypes'
 
 interface WorkerPosition {
     readonly x: number
@@ -91,47 +91,43 @@ export class Lumberjack extends Worker {
 
     private getAvailableTrees(allTrees: ResourceEntity[]): ResourceEntity[] {
         const workRadius = this.config.workRadius || 500
-        
-        return allResourceEntitys.filter(tree => {
+
+        return allTrees.filter(tree => {
             const distance = Phaser.Math.Distance.Between(this.x, this.y, tree.x, tree.y)
             const tileKey = this.getTileKey(tree.x, tree.y)
-            
+
             return !this.blacklistedTiles.has(tileKey) &&
-                   entity.isAvailableForHarvest(this) &&
-                   distance <= workRadius
+                tree.isAvailableForHarvest(this) && distance <= workRadius
         })
     }
 
-    private expandSearchRadius(allResourceEntitys: ResourceEntity[]): ResourceEntity | null {
+    private expandSearchRadius(allTrees: ResourceEntity[]): ResourceEntity | null {
         console.log('Lumberjack: Expanding search radius')
-        
+
         const extendedRadius = (this.config.workRadius || 500) * 1.5
-        const extendedResourceEntitys = allResourceEntitys.filter(tree => {
+        const extendedTrees = allTrees.filter(tree => {
             const distance = Phaser.Math.Distance.Between(this.x, this.y, tree.x, tree.y)
             const tileKey = this.getTileKey(tree.x, tree.y)
-            
+
             return !this.blacklistedTiles.has(tileKey) &&
-                   entity.isAvailableForHarvest(this) &&
-                   distance <= extendedRadius
+                tree.isAvailableForHarvest(this) && distance <= extendedRadius
         })
 
-        return extendedResourceEntitys.length > 0 ? this.selectOptimalResourceEntity(extendedResourceEntitys) : null
+        return extendedTrees.length > 0 ? this.selectOptimalTree(extendedTrees) : null
     }
 
-    private selectOptimalResourceEntity(trees: ResourceEntity[]): ResourceEntity | null {
-        // Sort by distance
+    private selectOptimalTree(trees: ResourceEntity[]): ResourceEntity | null {
         trees.sort((a, b) => {
             const distA = Phaser.Math.Distance.Between(this.x, this.y, a.x, a.y)
             const distB = Phaser.Math.Distance.Between(this.x, this.y, b.x, b.y)
             return distA - distB
         })
 
-        // Try the first 3 trees to avoid contention
         const candidateCount = Math.min(3, trees.length)
-        
+
         for (let i = 0; i < candidateCount; i++) {
             const tree = trees[i]
-            if (entity.setHarvester(this)) {
+            if (tree.setHarvester(this)) { // CORRIGÉ: tree au lieu de entity
                 return tree
             }
         }
@@ -244,9 +240,23 @@ export class Lumberjack extends Worker {
     }
 
     private addWoodToInventory(): void {
-        const woodPerResourceEntity = 3 // Could be configurable or from registry
-        const woodAdded = this.addToInventory('wood', woodPerResourceEntity)
-        console.log(`Lumberjack: ${woodAdded} wood added. Total: ${this.inventory.get('wood')}`)
+        const woodPerTree = 3
+        const woodAdded = this.addToInventory(ResourceType.WOOD, woodPerTree)
+
+        console.log(`Lumberjack: ${woodAdded} wood added to inventory. Total: ${this.getInventoryTotal()}`)
+
+        // Notification de récolte par worker (optionnelle, pour stats)
+        if (woodAdded > 0) {
+            window.dispatchEvent(new CustomEvent('game:workerHarvested', {
+                detail: {
+                    workerType: 'lumberjack',
+                    resourceType: ResourceType.WOOD,
+                    amount: woodAdded,
+                    timestamp: Date.now()
+                }
+            }))
+        }
+
         this.updateInventoryDisplay()
     }
 
@@ -298,42 +308,170 @@ export class Lumberjack extends Worker {
     }
 
     private processDeposit(): void {
-        const woodAmount = this.inventory.get('wood') || 0
-        
+        const woodAmount = this.inventory.get(ResourceType.WOOD) || 0
+
         if (woodAmount <= 0) {
+            console.log('Lumberjack: No wood to deposit')
             return
         }
 
-        if (this.targetStorage?.addResourceToBuilding) {
-            this.depositToBuilding(woodAmount)
-        } else if (this.isAtDepositPoint()) {
-            this.depositToPoint(woodAmount)
-        } else {
-            console.log('Lumberjack: No valid deposit found')
+        console.log(`Lumberjack: Processing deposit of ${woodAmount} wood`)
+
+        try {
+            if (this.targetStorage?.addResourceToBuilding) {
+                this.depositToBuilding(woodAmount)
+            } else if (this.isAtDepositPoint()) {
+                this.depositToPoint(woodAmount)
+            } else {
+                console.log('Lumberjack: No valid deposit target found')
+
+                // Notification d'erreur
+                window.dispatchEvent(new CustomEvent('game:notification', {
+                    detail: {
+                        type: 'warning',
+                        title: 'Dépôt impossible',
+                        message: 'Bûcheron ne trouve pas où déposer le bois',
+                        duration: 3000
+                    }
+                }))
+            }
+        } catch (error) {
+            console.error('Lumberjack: Error processing deposit:', error)
+
+            window.dispatchEvent(new CustomEvent('game:notification', {
+                detail: {
+                    type: 'error',
+                    title: 'Erreur de dépôt',
+                    message: 'Le bûcheron a eu un problème lors du dépôt',
+                    duration: 3000
+                }
+            }))
         }
 
         this.updateInventoryDisplay()
     }
 
+    public getWorkerStats(): {
+        inventoryTotal: number
+        woodAmount: number
+        efficiency: number
+        state: WorkerState
+        position: { x: number, y: number }
+    } {
+        return {
+            inventoryTotal: this.getInventoryTotal(),
+            woodAmount: this.inventory.get(ResourceType.WOOD) || 0,
+            efficiency: this.getStats().efficiency,
+            state: this.getState(),
+            position: { x: this.x, y: this.y }
+        }
+    }
+
     private depositToBuilding(woodAmount: number): void {
         console.log('Lumberjack: Depositing to building')
-        
-        const deposited = this.targetStorage.addResourceToBuilding(GameResourceType.WOOD, woodAmount)
-        this.removeFromInventory('wood', deposited)
-        
-        console.log(`Lumberjack: ${deposited} wood deposited to ${this.targetStorage.getType()}`)
-        
-        this.updateBuildingInterface()
-        this.targetStorage = null
+
+        try {
+            // ÉTAPE 1: Déposer au bâtiment
+            const deposited = this.targetStorage.addResourceToBuilding(ResourceType.WOOD, woodAmount)
+
+            if (deposited > 0) {
+                // ÉTAPE 2: Retirer de l'inventaire du worker
+                this.removeFromInventory(ResourceType.WOOD, deposited)
+
+                console.log(`Lumberjack: ${deposited} wood deposited to ${this.targetStorage.getType()}`)
+
+                // ÉTAPE 3: Notification Vue pour UI building
+                window.dispatchEvent(new CustomEvent('game:workerDepositToBuilding', {
+                    detail: {
+                        workerType: 'lumberjack',
+                        resourceType: ResourceType.WOOD,
+                        amount: deposited,
+                        buildingType: this.targetStorage.getType(),
+                        buildingPosition: this.targetStorage.getPosition(),
+                        timestamp: Date.now()
+                    }
+                }))
+
+                // ÉTAPE 4: Mettre à jour l'interface du bâtiment si ouverte
+                this.updateBuildingInterface()
+
+                // ÉTAPE 5: Notification visuelle
+                window.dispatchEvent(new CustomEvent('game:notification', {
+                    detail: {
+                        type: 'info',
+                        title: 'Stockage bâtiment',
+                        message: `${deposited} bois stocké dans ${this.getBuildingDisplayName()}`,
+                        duration: 2000
+                    }
+                }))
+            }
+
+            this.targetStorage = null
+        } catch (error) {
+            console.error('Lumberjack: Error depositing to building:', error)
+            this.targetStorage = null
+        }
+    }
+
+    private getBuildingDisplayName(): string {
+        if (!this.targetStorage) return 'bâtiment'
+
+        const buildingType = this.targetStorage.getType()
+        const names: Record<string, string> = {
+            'sawmill': 'scierie',
+            'house': 'maison',
+            'mine': 'mine',
+            'farm': 'ferme'
+        }
+        return names[buildingType] || buildingType
     }
 
     private depositToPoint(woodAmount: number): void {
         console.log('Lumberjack: Depositing to deposit point')
-        
-        ;(this.scene as any).events.emit('addWood', woodAmount)
-        this.removeFromInventory('wood', woodAmount)
-        
-        console.log(`Lumberjack: ${woodAmount} wood deposited to deposit point`)
+
+        try {
+            // ÉTAPE 1: Utiliser ResourceManager pour ajouter les ressources
+            const mainScene = this.scene as any
+            if (mainScene.resourceManager) {
+                const actualAdded = mainScene.resourceManager.addResource(
+                    ResourceType.WOOD,
+                    woodAmount,
+                    'worker_deposit_point'
+                )
+
+                console.log(`Lumberjack: ${actualAdded} wood added to global inventory`)
+
+                // ÉTAPE 2: Retirer de l'inventaire du worker
+                this.removeFromInventory(ResourceType.WOOD, actualAdded)
+
+                // ÉTAPE 3: Notification Vue pour mise à jour immédiate UI
+                window.dispatchEvent(new CustomEvent('game:workerDeposit', {
+                    detail: {
+                        workerType: 'lumberjack',
+                        resourceType: ResourceType.WOOD,
+                        amount: actualAdded,
+                        depositType: 'deposit_point',
+                        timestamp: Date.now()
+                    }
+                }))
+
+                // ÉTAPE 4: Notification visuelle
+                window.dispatchEvent(new CustomEvent('game:notification', {
+                    detail: {
+                        type: 'success',
+                        title: 'Ressources déposées',
+                        message: `Bûcheron a déposé ${actualAdded} bois`,
+                        duration: 2000
+                    }
+                }))
+
+                console.log(`Lumberjack: Successfully deposited ${actualAdded} wood`)
+            } else {
+                console.error('Lumberjack: ResourceManager not available for deposit')
+            }
+        } catch (error) {
+            console.error('Lumberjack: Error depositing to point:', error)
+        }
     }
 
     private isAtDepositPoint(): boolean {
@@ -354,8 +492,8 @@ export class Lumberjack extends Worker {
             console.warn('Lumberjack: ResourceEntity does not have findNearestInteractionPoint method')
             return { x: tree.x, y: tree.y }
         }
-        
-        return entity.findNearestInteractionPoint(this.x, this.y)
+
+        return tree.findNearestInteractionPoint(this.x, this.y) // CORRIGÉ: tree au lieu de entity
     }
 
     protected findStoragePoint(storage: TiledBuilding): WorkerPosition {

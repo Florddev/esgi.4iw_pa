@@ -1,6 +1,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useGameStore } from '@/stores/gameStore'
-import type { ResourceType } from '@/game/types'
+import type { ResourceType } from '@/game/types/ResourceSystemTypes'
+import { ResourceManager } from '@/game/services/ResourceManager'
 
 export interface GameInstance extends Phaser.Game {}
 
@@ -13,15 +14,23 @@ export const useGameState = () => {
   const initializeGameIntegration = (game: Phaser.Game) => {
     gameInstance.value = game
     isInitialized.value = true
-    
+
     // Set up event listeners for game state synchronization
     setupGameEventListeners()
-    
+
+    // Initialize ResourceManager integration
+    const resourceManager = ResourceManager.getInstance()
+
     // Notify that the game is ready
     gameStore.setGameLoaded(true)
-    
+
     // Emit ready event
-    window.dispatchEvent(new CustomEvent('game:ready'))
+    window.dispatchEvent(new CustomEvent('game:ready', {
+      detail: {
+        resourceManager,
+        gameInstance: game
+      }
+    }))
   }
 
   const setupGameEventListeners = () => {
@@ -41,9 +50,17 @@ export const useGameState = () => {
 
       console.log('MainScene found, setting up event listeners')
 
-      // Listen for resource updates from the game
+      // Listen for resource updates from the game - NOW USING RESOURCEMANAGER
       const handleResourceUpdate = (type: ResourceType, amount: number) => {
-        gameStore.updateResource(type, amount)
+        const resourceManager = ResourceManager.getInstance()
+        const current = resourceManager.getResource(type)
+        if (current !== amount) {
+          if (amount > current) {
+            resourceManager.addResource(type, amount - current, 'game_sync')
+          } else {
+            resourceManager.removeResource(type, current - amount, 'game_sync')
+          }
+        }
       }
 
       // Listen for building placement
@@ -109,12 +126,10 @@ export const useGameState = () => {
       return
     }
 
-    const mainScene = gameInstance.value.scene?.getScene('MainScene')
-    if (mainScene) {
-      mainScene.events.emit(command, data)
-    } else {
-      console.warn('MainScene not available for command:', command)
-    }
+    console.log(`Emitting game command: ${command}`, data)
+    window.dispatchEvent(new CustomEvent(`game:${command}`, {
+      detail: data
+    }))
   }
 
   const selectBuilding = (buildingType: string) => {
@@ -128,7 +143,9 @@ export const useGameState = () => {
   }
 
   const createWorker = (workerType: string, positionHint?: string | { x: number, y: number }) => {
-    emitGameCommand('createWorker', { type: workerType, positionHint })
+    console.log('createWorker called:', workerType, 'at position:', positionHint)
+    const effectivePositionHint = positionHint || 'near_player'
+    emitGameCommand('createWorker', { type: workerType, positionHint: effectivePositionHint })
   }
 
   const showBuildingInfo = (building: any) => {
@@ -179,21 +196,26 @@ export const useGameState = () => {
       clearBuildings()
     }
 
-    const handleCreateLumberjack = () => {
-      createWorker('lumberjack')
-    }
-
     const handleCreateWorker = (event: CustomEvent) => {
-      const { type, position } = event.detail
-      createWorker(type, position)
+      console.log('handleCreateWorker called:', event.detail)
+      const { type, positionHint } = event.detail
+      createWorker(type, positionHint)
     }
 
-    // Listen for building placement completion
+    const handleRequestCreateWorker = (event: CustomEvent) => {
+      console.log('handleRequestCreateWorker called:', event.detail)
+      const { type, positionHint } = event.detail
+      const effectivePositionHint = positionHint || 'near_player'
+
+      // Émettre directement vers MainScene
+      emitGameCommand('createWorkerCommand', { type, positionHint: effectivePositionHint })
+    }
+
     const handleBuildingPlacementComplete = (event: CustomEvent) => {
       const { buildingType } = event.detail
       // Déselectionner le bâtiment après placement
       gameStore.selectBuilding(null)
-      
+
       console.log('Building placement completed:', buildingType)
     }
 
@@ -201,7 +223,7 @@ export const useGameState = () => {
     const handleBuildingPlacementCancelled = () => {
       // Déselectionner le bâtiment si l'annulation vient du jeu
       gameStore.selectBuilding(null)
-      
+
       console.log('Building placement cancelled from game')
     }
 
@@ -209,15 +231,14 @@ export const useGameState = () => {
     const handleResourceUpdate = (event: CustomEvent) => {
       const { type, amount } = event.detail
       gameStore.updateResource(type, amount)
-      
+
       console.log(`Resource updated: ${type} = ${amount}`)
     }
 
     // Add event listeners
     window.addEventListener('game:selectBuilding', handleSelectBuilding)
     window.addEventListener('game:clearBuildings', handleClearBuildings)
-    window.addEventListener('game:createLumberjack', handleCreateLumberjack)
-    window.addEventListener('game:createWorker', handleCreateWorker)
+    window.addEventListener('game:requestCreateWorker', handleRequestCreateWorker)
     window.addEventListener('game:resourceUpdate', handleResourceUpdate)
     window.addEventListener('game:buildingPlacementComplete', handleBuildingPlacementComplete)
     window.addEventListener('game:buildingPlacementCancelled', handleBuildingPlacementCancelled)
@@ -225,8 +246,7 @@ export const useGameState = () => {
     return () => {
       window.removeEventListener('game:selectBuilding', handleSelectBuilding)
       window.removeEventListener('game:clearBuildings', handleClearBuildings)
-      window.removeEventListener('game:createLumberjack', handleCreateLumberjack)
-      window.removeEventListener('game:createWorker', handleCreateWorker)
+      window.removeEventListener('game:requestCreateWorker', handleRequestCreateWorker)
       window.removeEventListener('game:resourceUpdate', handleResourceUpdate)
       window.removeEventListener('game:buildingPlacementComplete', handleBuildingPlacementComplete)
       window.removeEventListener('game:buildingPlacementCancelled', handleBuildingPlacementCancelled)

@@ -4,41 +4,50 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="11ffd018-9421-4983-bf78-302c0d31060a" name="Changes" comment="">
+    <list default="true" id="352ec0bd-8df2-47e0-b707-7082ddcb4a7c" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/objects/Tree.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/components/ui/BuildingButton.vue" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/ui/BuildingButton.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/components/ui/BuildingListModal.vue" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/ui/BuildingListModal.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/components/ui/BuildingUI.vue" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/ui/BuildingUI.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/components/ui/GameUI.vue" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/ui/GameUI.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/components/ui/NotificationSystem.vue" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/ui/NotificationSystem.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/components/ui/ResourceDisplay.vue" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/ui/ResourceDisplay.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/components/ui/ResourceIcon.vue" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/ui/ResourceIcon.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/components/ui/ResourceItem.vue" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/ui/ResourceItem.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/configs/ResourceEntityConfigs.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/configs/ResourceEntityConfigs.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/objects/ResourceEntity.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/objects/ResourceEntity.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/objects/TiledBuilding.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/objects/TiledBuilding.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/game/objects/workers/Lumberjack.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/objects/workers/Lumberjack.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/game/objects/workers/Worker.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/objects/workers/Worker.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/game/scenes/MainScene.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/scenes/MainScene.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/services/AnimationRegistry.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/services/AnimationRegistry.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/services/BuildingRegistry.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/services/BuildingRegistry.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/services/PlayerInventory.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/services/ResourceManager.ts" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/game/services/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/services/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/types/PlayerInventory.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/types/ResourceTypes.ts" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/game/types/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/types/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/ui/ResourceUI.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/ui/components/ResourceDisplay.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/ui/composables/useGameState.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/ui/composables/useGameState.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/stores/gameStore.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/stores/gameStore.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
-  <component name="ComposerSettings">
-    <execution />
-  </component>
-  <component name="FileTemplateManagerImpl">
-    <option name="RECENT_TEMPLATES">
-      <list>
-        <option value="TypeScript File" />
-      </list>
-    </option>
-  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="MarkdownSettingsMigration">
-    <option name="stateVersion" value="1" />
-  </component>
-  <component name="PhpWorkspaceProjectConfiguration" interpreter_name="C:\wamp64\bin\php\php7.4.9\php.exe" />
   <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
   &quot;associatedIndex&quot;: 1
 }</component>
-  <component name="ProjectId" id="2v5BQWGy6aoRMNvMfaXYJEQUG38" />
+  <component name="ProjectId" id="2yYEuUTIa7desR3Hcgp13AYbq1a" />
   <component name="ProjectLevelVcsManager">
     <ConfirmationsSetting value="1" id="Add" />
   </component>
@@ -46,31 +55,22 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "WebServerToolWindowFactoryState": "false",
-    "git-widget-placeholder": "core/refactoring",
-    "last_opened_file_path": "D:/Education/Ingénierie du web/IW4/Projet annuel/TinyTown",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "prettierjs.PrettierConfiguration.Package": "D:\\Education\\Ingénierie du web\\IW4\\Projet annuel\\TinyTown\\server\\node_modules\\prettier",
-    "ts.external.directory.path": "D:\\Education\\Ingénierie du web\\IW4\\Projet annuel\\TinyTown\\server\\node_modules\\typescript\\lib",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;core/refactoring&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;npm.dev.executor&quot;: &quot;Run&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.keymap&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;C:\\Users\\flori\\Documents\\Web Development\\Github\\Florddev\\esgi.4iw_pa\\client\\node_modules\\typescript\\lib&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
-  <component name="RecentsManager">
-    <key name="MoveFile.RECENT_KEYS">
-      <recent name="C:\Users\flori\OneDrive\Documents\Web Development\Github\Florddev\esgi.4iw_pa\client\src\game\scenes" />
-      <recent name="C:\Users\flori\OneDrive\Documents\Web Development\Github\Florddev\esgi.4iw_pa\client\src\game\entities" />
-      <recent name="C:\Users\flori\OneDrive\Documents\Web Development\Github\Florddev\esgi.4iw_pa\client\src\game" />
-    </key>
-  </component>
+}</component>
   <component name="RunManager">
     <configuration name="dev" type="js.build_tools.npm" nameIsGenerated="true">
       <package-json value="$PROJECT_DIR$/client/package.json" />
@@ -93,15 +93,13 @@
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
-      <changelist id="11ffd018-9421-4983-bf78-302c0d31060a" name="Changes" comment="" />
-      <created>1743425041583</created>
+      <changelist id="352ec0bd-8df2-47e0-b707-7082ddcb4a7c" name="Changes" comment="" />
+      <created>1750003330418</created>
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
-      <updated>1743425041583</updated>
-      <workItem from="1743425043263" duration="4155000" />
-      <workItem from="1743432038621" duration="1425000" />
-      <workItem from="1743533198107" duration="2449000" />
-      <workItem from="1749995132430" duration="3427000" />
+      <updated>1750003330418</updated>
+      <workItem from="1750003332124" duration="5209000" />
+      <workItem from="1750062451478" duration="10628000" />
     </task>
     <servers />
   </component>

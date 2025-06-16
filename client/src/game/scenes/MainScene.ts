@@ -1,7 +1,6 @@
 import { Scene } from 'phaser'
 import EasyStar from 'easystarjs'
 import { Player } from '../objects/Player'
-import { Tree } from '../objects/Tree'
 import { DialogService } from '../services/DialogService'
 import { BuildingPreview } from '../objects/BuildingPreview'
 import { Building } from '../objects/Building'
@@ -9,10 +8,8 @@ import { BuildingManager } from '../services/BuildingManager'
 import { TiledBuildingPreview } from '../objects/TiledBuildingPreview'
 import type { TiledBuilding } from '../objects/TiledBuilding'
 import { WorkerManager } from '../services/WorkerManager'
-import { Lumberjack } from '../objects/workers/Lumberjack'
-import { PlayerInventory } from '../services/PlayerInventory'
 import { ResourceManager } from '../services/ResourceManager'
-import { ResourceType } from '../types/ResourceTypes'
+import { ResourceType } from '../types/ResourceSystemTypes'
 import { BuildingRegistry } from '../services/BuildingRegistry'
 import { AnimationRegistry } from '../services/AnimationRegistry'
 import { AnimationUtils } from '../utils/AnimationUtils'
@@ -36,6 +33,7 @@ export class MainScene extends Scene {
   private hasShownCompletionDialog: boolean = false
   private buildingPreview: BuildingPreview | null = null
   private selectedBuildingType: string | null = null
+  private lastSyncCheck: number = 0;
   private buildings: Building[] = []
   private buildingManager!: BuildingManager
   private resources = {
@@ -45,11 +43,10 @@ export class MainScene extends Scene {
   private tileWidth: number = 16
   private tileHeight: number = 16
   private baseGrid: number[][] = []
-  public playerInventory!: PlayerInventory
-  private resourceManager!: ResourceManager
   private buildingRegistry!: BuildingRegistry
   private animationRegistry!: AnimationRegistry
   private resourceEntityManager!: ResourceEntityManager
+  public resourceManager!: ResourceManager;
 
   private workerManager!: WorkerManager
 
@@ -65,8 +62,8 @@ export class MainScene extends Scene {
     this.animationRegistry = AnimationRegistry.getInstance()
 
     // Use ResourceManager to load resource textures
-    const resourceManager = ResourceManager.getInstance()
-    resourceManager.prepareSceneLoading(this)
+    this.resourceManager = ResourceManager.getInstance()
+    this.resourceManager.prepareSceneLoading(this)
 
     // Load game textures
     this.load.spritesheet('player-walk', 'sprites/player-walk.png', {
@@ -113,6 +110,7 @@ export class MainScene extends Scene {
   create() {
     // Initialize animation registry for this scene
     this.setupAnimations()
+    this.setupVueResourceSync();
 
     // Create map
     this.map = this.make.tilemap({ key: 'map' })
@@ -178,32 +176,15 @@ export class MainScene extends Scene {
 
     // Initialize resource manager and inventory
     this.resourceManager = ResourceManager.getInstance()
+    this.resourceManager.prepareSceneLoading(this)
+
     this.buildingRegistry = BuildingRegistry.getInstance()
-    this.playerInventory = new PlayerInventory()
 
     // Launch resource UI
     this.scene.launch('ResourceUI')
 
-    // Listen for wood addition event (adapt for new system)
-    this.events.on('addWood', (amount: number) => {
-      const added = this.playerInventory.addResource(ResourceType.WOOD, amount)
-
-      // Update local resource UI
-      const resourceUI = this.scene.get('ResourceUI') as any
-      if (resourceUI) {
-        resourceUI.updateResourceDisplay()
-      }
-
-      // NEW: Emit event for Vue.js
-      window.dispatchEvent(new CustomEvent('game:resourceUpdate', {
-        detail: {
-          type: ResourceType.WOOD,
-          amount: this.playerInventory.getResource(ResourceType.WOOD),
-          change: added
-        }
-      }))
-
-      console.log(`Added ${added} wood. Total: ${this.playerInventory.getResource(ResourceType.WOOD)}`)
+    this.events.on('addResource', (type: ResourceType, amount: number) => {
+      this.resourceManager.addResource(type, amount, 'game_event')
     })
 
     // Create and configure layers automatically
@@ -398,8 +379,53 @@ export class MainScene extends Scene {
     })
 
     this.rebuildPathfindingGrid()
-    this.syncResourcesWithVue()
     this.setupVueEventListeners()
+  }
+
+  private setupVueResourceSync(): void {
+    try {
+      // Écouter les événements de changement de ressources du ResourceManager
+      this.resourceManager.getGlobalInventory().on('change', (event: any) => {
+        this.notifyVueResourceChange(event);
+      });
+
+      // Notifier Vue que le jeu est prêt avec les ressources initiales
+      this.notifyGameReady();
+
+      console.log('Vue resource sync configured successfully');
+    } catch (error) {
+      console.error('Error setting up Vue resource sync:', error);
+    }
+  }
+
+  private notifyVueResourceChange(event: any): void {
+    try {
+      // Émettre vers Vue.js via window events
+      window.dispatchEvent(new CustomEvent('game:resourceUpdate', {
+        detail: {
+          type: event.type,
+          amount: event.newAmount,
+          change: event.change,
+          source: 'resource_manager'
+        }
+      }));
+
+      console.log('Resource change notified to Vue:', event.type, event.newAmount);
+    } catch (error) {
+      console.error('Error notifying Vue of resource change:', error);
+    }
+  }
+
+  public addResource(type: ResourceType, amount: number, source?: string): number {
+    return this.resourceManager.addResource(type, amount, source || 'scene')
+  }
+
+  public removeResource(type: ResourceType, amount: number, target?: string): number {
+    return this.resourceManager.removeResource(type, amount, target || 'scene')
+  }
+
+  public canAffordCost(cost: Partial<Record<ResourceType, number>>): boolean {
+    return this.resourceManager.canAfford(cost)
   }
 
   private setupAnimations(): void {
@@ -419,20 +445,57 @@ export class MainScene extends Scene {
     }
   }
 
-  private syncResourcesWithVue(): void {
-    // Synchronize all current resources with Vue
-    this.resourceManager.getAllResources().forEach(resource => {
-      const amount = this.playerInventory.getResource(resource.id)
-      if (amount > 0) {
-        window.dispatchEvent(new CustomEvent('game:resourceUpdate', {
-          detail: {
-            type: resource.id,
-            amount,
-            change: 0 // Initial synchronization
-          }
-        }))
-      }
-    })
+  public getResourceAmount(type: ResourceType): number {
+    return this.resourceManager.getResource(type)
+  }
+
+  public getAllResources(): ResourceStack[] {
+    return this.resourceManager.getGlobalInventory().getNonZeroResources();
+  }
+
+  private notifyGameReady(): void {
+    try {
+      // Synchroniser avec Vue.js
+      window.dispatchEvent(new CustomEvent('game:ready', {
+        detail: {
+          resourceManager: this.resourceManager,
+          totalResources: this.resourceManager.getGlobalInventory().getTotalItems(),
+          allResources: Object.fromEntries(this.resourceManager.getGlobalInventory().getAllResources())
+        }
+      }));
+
+      // Déclencher une mise à jour initiale des ressources
+      this.triggerInitialResourceSync();
+
+      console.log('Game ready notification sent to Vue with resources');
+    } catch (error) {
+      console.error('Error notifying game ready to Vue:', error);
+    }
+  }
+
+  private triggerInitialResourceSync(): void {
+    try {
+      const inventory = this.resourceManager.getGlobalInventory();
+      const allResources = inventory.getAllResources();
+
+      // Notifier chaque ressource individuellement pour déclencher la réactivité
+      allResources.forEach((amount, type) => {
+        if (amount > 0) {
+          window.dispatchEvent(new CustomEvent('game:resourceUpdate', {
+            detail: {
+              type,
+              amount,
+              change: amount,
+              source: 'initial_sync'
+            }
+          }));
+        }
+      });
+
+      console.log('Initial resource sync completed');
+    } catch (error) {
+      console.error('Error in initial resource sync:', error);
+    }
   }
 
   private setupVueEventListeners(): void {
@@ -455,7 +518,7 @@ export class MainScene extends Scene {
   
     window.addEventListener('game:selectBuilding', handleBuildingSelection)
     window.addEventListener('game:deselectBuilding', handleBuildingDeselection)
-    window.addEventListener('game:createWorker', handleWorkerCreation)
+    window.addEventListener('game:createWorkerCommand', handleWorkerCreation)
   }
 
 
@@ -502,87 +565,81 @@ export class MainScene extends Scene {
 
   private onWorkerCreationFromVue(workerType: string, positionHint?: string | { x: number, y: number }): void {
     console.log('Worker creation requested from Vue:', workerType, positionHint)
-    
-    let spawnPosition = { x: 100, y: 100 } // Default position
-    
-    // Determine spawn position
+
+    let spawnPosition = { x: 100, y: 100 }
+
     if (positionHint === 'near_player' && this.player) {
-      // Spawn near player
       spawnPosition = {
-        x: this.player.x + 32 + Math.random() * 64 - 32, // Randomly around player
+        x: this.player.x + 32 + Math.random() * 64 - 32,
         y: this.player.y + 32 + Math.random() * 64 - 32
       }
     } else if (typeof positionHint === 'object' && positionHint.x && positionHint.y) {
       spawnPosition = positionHint
     } else if (this.player) {
-      // Fallback: near player
       spawnPosition = {
         x: this.player.x + 64,
         y: this.player.y
       }
     }
-  
-    // Determine deposit point (nearest sawmill)
+
     let depositPoint: { x: number, y: number } | undefined = undefined
-    
+
     if (this.buildingManager) {
       const buildings = this.buildingManager.getBuildings()
       const sawmills = buildings.filter(building => building.getType() === 'sawmill')
-      
+
       if (sawmills.length > 0) {
-        // Find nearest sawmill to spawn point
         let closestSawmill = sawmills[0]
         let closestDistance = Phaser.Math.Distance.Between(
-          spawnPosition.x, spawnPosition.y,
-          closestSawmill.getPosition().x,
-          closestSawmill.getPosition().y
+            spawnPosition.x, spawnPosition.y,
+            closestSawmill.getPosition().x,
+            closestSawmill.getPosition().y
         )
-        
+
         for (let i = 1; i < sawmills.length; i++) {
           const distance = Phaser.Math.Distance.Between(
-            spawnPosition.x, spawnPosition.y,
-            sawmills[i].getPosition().x,
-            sawmills[i].getPosition().y
+              spawnPosition.x, spawnPosition.y,
+              sawmills[i].getPosition().x,
+              sawmills[i].getPosition().y
           )
           if (distance < closestDistance) {
             closestSawmill = sawmills[i]
             closestDistance = distance
           }
         }
-        
+
         const pos = closestSawmill.getPosition()
         const dim = closestSawmill.getDimensions()
-        
+
         depositPoint = {
           x: pos.x + (dim.tilesWidth * 16) / 2,
           y: pos.y + dim.tilesHeight * 16 + 16
         }
-        
+
         console.log('Deposit point configured at sawmill:', depositPoint)
       }
     }
-  
-    // Create worker using WorkerManager
+
     const worker = this.createWorkerAtPosition(workerType, spawnPosition.x, spawnPosition.y, depositPoint)
-    
+
     if (worker) {
-      // Notify Vue.js that worker was created
+      // AMÉLIORATION: Notification avec plus de détails
       window.dispatchEvent(new CustomEvent('game:workerCreated', {
-        detail: { 
+        detail: {
           worker,
           type: workerType,
-          position: spawnPosition
+          position: spawnPosition,
+          depositPoint
         }
       }))
-      
+
       console.log(`${workerType} created successfully at (${spawnPosition.x}, ${spawnPosition.y})`)
     } else {
-      // Notify Vue.js of failure
       window.dispatchEvent(new CustomEvent('game:notification', {
         detail: {
           type: 'error',
-          title: 'Error',
-          message: `Unable to create ${workerType}`
+          title: 'Erreur',
+          message: `Impossible de créer ${workerType}`
         }
       }))
     }
@@ -600,29 +657,6 @@ export class MainScene extends Scene {
     
     console.warn(`Worker type ${workerType} not implemented yet`)
     return null
-  }
-
-  public addResource(type: ResourceType, amount: number): void {
-    const oldAmount = this.playerInventory.getResource(type)
-    const added = this.playerInventory.addResource(type, amount)
-
-    // Update UI
-    const resourceUI = this.scene.get('ResourceUI') as any
-    if (resourceUI) {
-      resourceUI.updateResourceDisplay()
-    }
-
-    // Emit event for Vue.js
-    window.dispatchEvent(new CustomEvent('game:resourceUpdate', {
-      detail: {
-        type,
-        amount: this.playerInventory.getResource(type),
-        change: added
-      }
-    }))
-
-    // Emit event for other systems
-    this.events.emit('resourceChanged', type, this.playerInventory.getResource(type))
   }
 
   public createLumberjack(x: number, y: number, depositPoint?: { x: number, y: number }): any {
@@ -892,13 +926,11 @@ export class MainScene extends Scene {
 
   private placeBuilding(pointer: Phaser.Input.Pointer): void {
     if (!this.buildingPreview || !this.selectedBuildingType) return
-  
+
     if (this.buildingPreview.isValidPlacement()) {
-      // Vérifier si on peut encore se permettre le bâtiment avant de le placer
       if (!this.canAffordBuilding(this.selectedBuildingType)) {
         console.log('Cannot afford building anymore')
-        
-        // Notifier Vue.js du problème
+
         window.dispatchEvent(new CustomEvent('game:notification', {
           detail: {
             type: 'error',
@@ -906,93 +938,109 @@ export class MainScene extends Scene {
             message: 'Vous n\'avez plus assez de ressources pour ce bâtiment'
           }
         }))
-        
-        // Annuler la construction
+
         this.onBuildingDeselectedFromVue()
         window.dispatchEvent(new CustomEvent('game:buildingPlacementCancelled'))
         return
       }
-  
+
       const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y)
       const snappedX = Math.floor(worldPoint.x / 16) * 16
       const snappedY = Math.floor(worldPoint.y / 16) * 16
-  
-      // MAINTENANT déduire les ressources avant de placer le bâtiment
+
+      // Obtenir le coût avant déduction pour la notification
       const cost = this.getBuildingCost(this.selectedBuildingType)
-      this.deductBuildingCost(cost)
-  
-      // Placer le bâtiment
+
+      // Déduire les ressources
+      this.deductBuildingCost(this.selectedBuildingType)
+
       const newBuilding = this.buildingManager.placeBuilding(
-        this.selectedBuildingType,
-        snappedX,
-        snappedY
+          this.selectedBuildingType,
+          snappedX,
+          snappedY
       )
-  
-      // Marquer les collisions et mettre à jour la grille de pathfinding
+
       this.markBuildingCollisions(newBuilding)
       this.rebuildPathfindingGrid()
-  
-      // Notifier Vue.js que le bâtiment a été placé
+
+      // AMÉLIORATION: Notification détaillée avec coût
       window.dispatchEvent(new CustomEvent('game:buildingPlaced', {
-        detail: { 
+        detail: {
           building: newBuilding,
           type: this.selectedBuildingType,
-          cost: cost
+          cost: cost,
+          position: { x: snappedX, y: snappedY }
         }
       }))
-  
-      // Notifier Vue.js pour déselectionner le bâtiment
+
       window.dispatchEvent(new CustomEvent('game:buildingPlacementComplete', {
-        detail: { buildingType: this.selectedBuildingType }
+        detail: {
+          buildingType: this.selectedBuildingType,
+          resourcesDeducted: cost
+        }
       }))
-  
-      // Réinitialiser l'aperçu 
+
       this.buildingPreview.destroy()
       this.buildingPreview = null
       this.selectedBuildingType = null
-  
-      // Restaurer le curseur
+
       if (this.uiScene) {
         this.uiScene.defaultCursor.setVisible(true)
       }
-  
-      console.log('Building placed and resources deducted')
+
+      console.log('Building placed and resources deducted:', cost)
     } else {
-      // Le placement n'est pas valide
       console.log('Invalid building placement')
-      
-      // Optionnel: faire clignoter l'aperçu pour indiquer l'erreur
+
       if (this.buildingPreview) {
         this.buildingPreview.flashInvalid()
       }
     }
   }
 
+  public forceSyncWithVue(): void {
+    try {
+      this.triggerInitialResourceSync();
+      console.log('Forced sync with Vue completed');
+    } catch (error) {
+      console.error('Error forcing sync with Vue:', error);
+    }
+  }
+
+  public getResourcesSnapshot(): Record<string, number> {
+    try {
+      const inventory = this.resourceManager.getGlobalInventory();
+      const resources: Record<string, number> = {};
+
+      inventory.getAllResources().forEach((amount, type) => {
+        resources[type] = amount;
+      });
+
+      return resources;
+    } catch (error) {
+      console.error('Error getting resources snapshot:', error);
+      return {};
+    }
+  }
+
   private canAffordBuilding(buildingType: string): boolean {
-    const resources = new Map();
-    this.resourceManager.getAllResources().forEach(resource => {
-      const amount = this.playerInventory.getResource(resource.id);
-      resources.set(resource.id, amount);
-    });
-    
-    return this.buildingRegistry.canAffordBuilding(buildingType, resources);
+    const buildingRegistry = BuildingRegistry.getInstance()
+    const cost = buildingRegistry.getBuildingCost(buildingType)
+    return this.resourceManager.canAfford(cost)
   }
 
   private deductBuildingCost(buildingType: string): void {
-    const cost = this.buildingRegistry.getBuildingCost(buildingType);
-    
-    Object.entries(cost).forEach(([resource, amount]) => {
-      const removed = this.playerInventory.removeResource(resource as ResourceType, amount);
-      
-      // Synchroniser avec Vue.js
-      window.dispatchEvent(new CustomEvent('game:resourceUpdate', {
-        detail: { 
-          type: resource, 
-          amount: this.playerInventory.getResource(resource as ResourceType),
-          change: -removed
-        }
-      }));
-    });
+    const buildingRegistry = BuildingRegistry.getInstance()
+    const cost = buildingRegistry.getBuildingCost(buildingType)
+    this.resourceManager.deductCost(cost, 'building_construction')
+  }
+
+  public deductCost(cost: Partial<Record<ResourceType, number>>, source?: string): boolean {
+    return this.resourceManager.deductCost(cost, source || 'building_purchase')
+  }
+
+  private getBuildingCost(buildingType: string): Record<string, number> {
+    return this.buildingRegistry.getBuildingCost(buildingType);
   }
 
   private findNearestWalkableTile(targetX: number, targetY: number): { x: number, y: number } | null {
@@ -1072,5 +1120,36 @@ export class MainScene extends Scene {
     this.resourceEntityManager.updateEntities()
     this.buildingManager.updateBuildings(this.player)
     this.workerManager.updateWorkers()
+
+    if (process.env.NODE_ENV === 'development') {
+      this.debugResourceSync();
+    }
   }
+
+  private debugResourceSync(): void {
+    // Vérifier la synchronisation toutes les 5 secondes en mode dev
+    if (!this.lastSyncCheck) {
+      this.lastSyncCheck = Date.now();
+    }
+
+    if (Date.now() - this.lastSyncCheck > 5000) {
+      this.lastSyncCheck = Date.now();
+
+      try {
+        const totalResources = this.resourceManager.getGlobalInventory().getTotalItems();
+        console.log('Current total resources:', totalResources);
+
+        // Émettre un événement de debug
+        window.dispatchEvent(new CustomEvent('game:resourceDebug', {
+          detail: {
+            totalResources,
+            snapshot: this.getResourcesSnapshot()
+          }
+        }));
+      } catch (error) {
+        console.error('Error in resource sync debug:', error);
+      }
+    }
+  }
+
 }

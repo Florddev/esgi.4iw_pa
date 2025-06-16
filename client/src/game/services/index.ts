@@ -1,9 +1,10 @@
-export { ResourceManager } from './ResourceManager'
-export { PlayerInventory } from './PlayerInventory'
 export { BuildingManager } from './BuildingManager'
 export { BuildingRegistry } from './BuildingRegistry'
 export { WorkerManager } from './WorkerManager'
 export { WorkerRegistry } from './WorkerRegistry'
+export { ResourceRegistry } from './ResourceRegistry';
+export { ResourceInventory } from './ResourceInventory';
+export { ResourceManager } from './ResourceManager';
 export { 
     AnimationRegistry, 
     AnimationType,

@@ -1,0 +1,5 @@
+# Ajoutez un motif d'exclusion par ligne 
+# Exemple: 
+# *.tmp 
+# test.txt 
+# dossier_a_exclure\ 
