@@ -4,37 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="352ec0bd-8df2-47e0-b707-7082ddcb4a7c" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/components/ui/BuildingButton.vue" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/ui/BuildingButton.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/components/ui/BuildingListModal.vue" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/ui/BuildingListModal.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/components/ui/BuildingUI.vue" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/ui/BuildingUI.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/components/ui/GameUI.vue" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/ui/GameUI.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/components/ui/NotificationSystem.vue" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/ui/NotificationSystem.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/components/ui/ResourceDisplay.vue" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/ui/ResourceDisplay.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/components/ui/ResourceIcon.vue" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/ui/ResourceIcon.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/components/ui/ResourceItem.vue" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/ui/ResourceItem.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/configs/ResourceEntityConfigs.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/configs/ResourceEntityConfigs.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/objects/ResourceEntity.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/objects/ResourceEntity.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/objects/TiledBuilding.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/objects/TiledBuilding.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/objects/workers/Lumberjack.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/objects/workers/Lumberjack.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/objects/workers/Worker.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/objects/workers/Worker.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/scenes/MainScene.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/scenes/MainScene.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/services/AnimationRegistry.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/services/AnimationRegistry.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/services/BuildingRegistry.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/services/BuildingRegistry.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/services/PlayerInventory.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/services/ResourceManager.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/services/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/services/index.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/types/PlayerInventory.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/types/ResourceTypes.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/types/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/types/index.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/ui/ResourceUI.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/ui/components/ResourceDisplay.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/ui/composables/useGameState.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/ui/composables/useGameState.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/stores/gameStore.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/stores/gameStore.ts" afterDir="false" />
-    </list>
+    <list default="true" id="352ec0bd-8df2-47e0-b707-7082ddcb4a7c" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
