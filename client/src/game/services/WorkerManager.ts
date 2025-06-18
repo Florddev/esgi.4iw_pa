@@ -1,392 +1,210 @@
-import { Scene } from 'phaser'
-import { Worker, WorkerState } from '../objects/workers/Worker'
-import { WorkerRegistry } from './WorkerRegistry'
-import { WorkerType, type WorkerSaveData, type WorkerPosition } from '../types'
+import { Scene } from 'phaser';
+type Scene = typeof Scene;
 
-interface WorkerPerformanceData {
-    x: number
-    y: number
-    unchangedCount: number
-}
+import { Worker } from '../objects/workers';
+import { WorkerRegistry } from './WorkerRegistry';
+import { WorkerType, type WorkerPosition } from '../types';
 
 export class WorkerManager {
-    private readonly scene: Scene
-    private readonly workers: Worker[] = []
-    private readonly workerRegistry: WorkerRegistry
-    private readonly workerLastPositions = new Map<Worker, WorkerPerformanceData>()
-    private readonly STORAGE_KEY = 'WORKERS_STORAGE'
-    private readonly STUCK_CHECK_INTERVAL = 5000 // 5 seconds
-    private readonly MAX_UNCHANGED_COUNT = 3 // 15 seconds total
+    private readonly scene: Scene;
+    private readonly registry: WorkerRegistry;
+    private readonly workers = new Map<string, Worker>();
+    private nextWorkerId: number = 1;
 
     constructor(scene: Scene) {
-        this.scene = scene
-        this.workerRegistry = WorkerRegistry.getInstance()
-        this.setupPerformanceMonitoring()
+        this.scene = scene;
+        this.registry = WorkerRegistry.getInstance();
+
+        console.log('WorkerManager: Initialized');
     }
 
-    private setupPerformanceMonitoring(): void {
-        this.scene.time.addEvent({
-            delay: this.STUCK_CHECK_INTERVAL,
-            callback: this.checkStuckWorkers,
-            callbackScope: this,
-            loop: true
-        })
-    }
-
-    public createWorker(
-        type: WorkerType,
-        x: number,
-        y: number,
-        depositPoint?: WorkerPosition
-    ): Worker | null {
-        const worker = this.workerRegistry.createWorker(type, this.scene, x, y, depositPoint)
-        
-        if (worker) {
-            this.workers.push(worker)
-            this.saveState()
-            
-            console.log(`Created ${this.workerRegistry.getWorkerName(type)} at (${x}, ${y})`)
-            return worker
-        }
-        
-        console.error(`Failed to create worker of type ${type}`)
-        return null
-    }
-
-    public createLumberjack(x: number, y: number, depositPoint?: WorkerPosition): Worker | null {
-        return this.createWorker(WorkerType.LUMBERJACK, x, y, depositPoint)
-    }
-
-    public removeWorker(worker: Worker): boolean {
-        const index = this.workers.indexOf(worker)
-        if (index === -1) {
-            return false
-        }
-
-        this.workers.splice(index, 1)
-        this.workerLastPositions.delete(worker)
-        
+    public createWorker(type: WorkerType, x: number, y: number, depositPoint?: WorkerPosition): Worker | null {
         try {
-            worker.destroy()
+            console.log(`WorkerManager: Creating worker ${type} at (${x}, ${y})`);
+
+            const worker = this.registry.createWorker(type, this.scene, x, y, depositPoint);
+            if (!worker) {
+                console.error(`WorkerManager: Registry failed to create worker ${type}`);
+                return null;
+            }
+
+            const id = `worker_${type}_${this.nextWorkerId++}`;
+            this.workers.set(id, worker);
+
+            console.log(`WorkerManager: Created worker ${id}`);
+
+            // Notifier Vue.js
+            window.dispatchEvent(new CustomEvent('game:workerCreated', {
+                detail: {
+                    id,
+                    type,
+                    position: { x, y },
+                    config: worker.getConfig()
+                }
+            }));
+
+            return worker;
+
         } catch (error) {
-            console.error('Error destroying worker:', error)
+            console.error(`WorkerManager: Error creating worker ${type}:`, error);
+            return null;
         }
-        
-        this.saveState()
-        return true
     }
 
-    public getWorkers(): readonly Worker[] {
-        return [...this.workers]
+    public removeWorker(workerId: string): boolean {
+        const worker = this.workers.get(workerId);
+        if (!worker) {
+            console.warn(`WorkerManager: Worker ${workerId} not found`);
+            return false;
+        }
+
+        try {
+            worker.destroy();
+            this.workers.delete(workerId);
+            console.log(`WorkerManager: Removed worker ${workerId}`);
+
+            // Notifier Vue.js
+            window.dispatchEvent(new CustomEvent('game:workerRemoved', {
+                detail: { id: workerId }
+            }));
+
+            return true;
+
+        } catch (error) {
+            console.error(`WorkerManager: Error removing worker ${workerId}:`, error);
+            return false;
+        }
+    }
+
+    public getWorker(workerId: string): Worker | null {
+        return this.workers.get(workerId) || null;
+    }
+
+    public getAllWorkers(): readonly Worker[] {
+        return Array.from(this.workers.values());
     }
 
     public getWorkersByType(type: WorkerType): readonly Worker[] {
-        return this.workers.filter(worker => {
-            const workerType = this.workerRegistry.getWorkerTypeFromInstance(worker)
-            return workerType === type
-        })
+        return Array.from(this.workers.values()).filter(worker =>
+            worker.getConfig().id === type
+        );
     }
 
-    public getWorkerCount(): number {
-        return this.workers.length
-    }
-
-    public getWorkerCountByType(type: WorkerType): number {
-        return this.getWorkersByType(type).length
-    }
-
-    public updateWorkers(): void {
-        // Update all workers
-        this.workers.forEach(worker => {
-            try {
-                worker.update()
-            } catch (error) {
-                console.error('Error updating worker:', error)
-            }
-        })
-
-        // Clean up destroyed workers
-        this.cleanupDestroyedWorkers()
-    }
-
-    private cleanupDestroyedWorkers(): void {
-        const initialCount = this.workers.length
-        
-        for (let i = this.workers.length - 1; i >= 0; i--) {
-            const worker = this.workers[i]
-            if (!worker.scene || !worker.active) {
-                this.workers.splice(i, 1)
-                this.workerLastPositions.delete(worker)
-            }
-        }
-
-        if (this.workers.length !== initialCount) {
-            console.log(`Cleaned up ${initialCount - this.workers.length} destroyed workers`)
-            this.saveState()
-        }
-    }
-
-    private checkStuckWorkers(): void {
-        try {
-            this.workers.forEach(worker => {
-                if (!worker || !worker.scene) {
-                    return
-                }
-
-                this.updateWorkerPerformanceData(worker)
-                this.handleStuckWorker(worker)
-            })
-
-            this.cleanupOrphanedPerformanceData()
-        } catch (error) {
-            console.error('Error checking stuck workers:', error)
-        }
-    }
-
-    private updateWorkerPerformanceData(worker: Worker): void {
-        const lastPos = this.workerLastPositions.get(worker)
-        const currentPos = { x: worker.x, y: worker.y }
-
-        if (!lastPos) {
-            this.workerLastPositions.set(worker, {
-                x: currentPos.x,
-                y: currentPos.y,
-                unchangedCount: 0
-            })
-            return
-        }
-
-        const distance = Phaser.Math.Distance.Between(
-            lastPos.x, lastPos.y,
-            currentPos.x, currentPos.y
-        )
-
-        if (distance < 5) { // Practically immobile
-            lastPos.unchangedCount++
-        } else {
-            // Worker has moved, reset counter
-            lastPos.x = currentPos.x
-            lastPos.y = currentPos.y
-            lastPos.unchangedCount = 0
-        }
-
-        this.workerLastPositions.set(worker, lastPos)
-    }
-
-    private handleStuckWorker(worker: Worker): void {
-        const performanceData = this.workerLastPositions.get(worker)
-        
-        if (performanceData && performanceData.unchangedCount >= this.MAX_UNCHANGED_COUNT) {
-            console.log('WorkerManager: Stuck worker detected, force reset')
-
-            try {
-                worker.cleanup()
-                worker.setState(WorkerState.IDLE)
-                performanceData.unchangedCount = 0
-            } catch (error) {
-                console.error('Error resetting stuck worker:', error)
-                
-                // Try a more direct approach
-                try {
-                    worker.setState(WorkerState.IDLE)
-                    performanceData.unchangedCount = 0
-                } catch (e) {
-                    console.error('Unable to reset worker:', e)
-                    // Mark for removal if completely broken
-                    this.removeWorker(worker)
-                }
-            }
-        }
-    }
-
-    private cleanupOrphanedPerformanceData(): void {
-        this.workerLastPositions.forEach((_, worker) => {
-            if (!this.workers.includes(worker)) {
-                this.workerLastPositions.delete(worker)
-            }
-        })
-    }
-
-    // Save/Load system
-    private saveState(): void {
-        try {
-            const state: WorkerSaveData[] = this.workers.map(worker => {
-                const workerType = this.workerRegistry.getWorkerTypeFromInstance(worker)
-                const stats = worker.getStats()
-                const inventory: Record<string, number> = {}
-                
-                // Convert inventory Map to plain object
-                worker.getInventoryState().forEach((amount, resource) => {
-                    inventory[resource] = amount
-                })
-
-                return {
-                    type: workerType || WorkerType.LUMBERJACK, // Fallback
-                    position: { x: worker.x, y: worker.y },
-                    state: worker.getState(),
-                    inventory,
-                    depositPoint: (worker as any).depositPoint || undefined,
-                    stats
-                }
-            })
-
-            sessionStorage.setItem(this.STORAGE_KEY, JSON.stringify(state))
-        } catch (error) {
-            console.error('Error saving worker state:', error)
-        }
-    }
-
-    public loadState(): void {
-        try {
-            const stored = sessionStorage.getItem(this.STORAGE_KEY)
-            if (!stored) return
-
-            const state: WorkerSaveData[] = JSON.parse(stored)
-            
-            // Validate and load workers
-            const validWorkers = state.filter(data => 
-                this.workerRegistry.isValidWorkerType(data.type) &&
-                typeof data.position.x === 'number' &&
-                typeof data.position.y === 'number' &&
-                !isNaN(data.position.x) &&
-                !isNaN(data.position.y)
-            )
-
-            validWorkers.forEach(data => {
-                const worker = this.createWorker(
-                    data.type,
-                    data.position.x,
-                    data.position.y,
-                    data.depositPoint
-                )
-
-                if (worker) {
-                    // Restore worker state
-                    try {
-                        worker.setState(data.state)
-                        
-                        // Restore inventory if available
-                        if (data.inventory) {
-                            Object.entries(data.inventory).forEach(([resource, amount]) => {
-                                worker.addToInventory(resource as any, amount)
-                            })
-                        }
-                    } catch (error) {
-                        console.error('Error restoring worker state:', error)
-                        // Worker is created but might not have full state
-                    }
-                }
-            })
-
-            console.log(`Loaded ${validWorkers.length} workers`)
-        } catch (error) {
-            console.error('Error loading workers:', error)
-            // Clean up corrupted storage
-            sessionStorage.removeItem(this.STORAGE_KEY)
-        }
-    }
-
-    // Statistics and utilities
-    public getWorkerStatistics(): {
-        readonly totalWorkers: number
-        readonly workersByType: Record<string, number>
-        readonly workersByState: Record<WorkerState, number>
-        readonly averageEfficiency: number
-    } {
-        const workersByType: Record<string, number> = {}
-        const workersByState: Record<WorkerState, number> = {
-            [WorkerState.IDLE]: 0,
-            [WorkerState.MOVING_TO_RESOURCE]: 0,
-            [WorkerState.HARVESTING]: 0,
-            [WorkerState.MOVING_TO_STORAGE]: 0,
-            [WorkerState.DEPOSITING]: 0
-        }
-
-        let totalEfficiency = 0
-
-        this.workers.forEach(worker => {
-            // Count by type
-            const workerType = this.workerRegistry.getWorkerTypeFromInstance(worker)
-            const typeName = workerType ? this.workerRegistry.getWorkerName(workerType) : 'Unknown'
-            workersByType[typeName] = (workersByType[typeName] || 0) + 1
-
-            // Count by state
-            const state = worker.getState()
-            workersByState[state]++
-
-            // Calculate efficiency
-            totalEfficiency += this.workerRegistry.calculateWorkerEfficiency(worker)
-        })
-
-        return {
-            totalWorkers: this.workers.length,
-            workersByType,
-            workersByState,
-            averageEfficiency: this.workers.length > 0 ? totalEfficiency / this.workers.length : 0
-        }
-    }
-
-    public getWorkerInRadius(position: WorkerPosition, radius: number): readonly Worker[] {
-        return this.workers.filter(worker => {
-            const distance = Phaser.Math.Distance.Between(
-                position.x, position.y,
-                worker.x, worker.y
-            )
-            return distance <= radius
-        })
-    }
-
-    public findNearestWorker(position: WorkerPosition, type?: WorkerType): Worker | null {
-        let candidates = this.workers
-
+    public getWorkerCount(type?: WorkerType): number {
         if (type) {
-            candidates = this.workers.filter(worker => {
-                const workerType = this.workerRegistry.getWorkerTypeFromInstance(worker)
-                return workerType === type
-            })
+            return this.getWorkersByType(type).length;
         }
-
-        if (candidates.length === 0) return null
-
-        return candidates.reduce((nearest, current) => {
-            const nearestDist = Phaser.Math.Distance.Between(
-                position.x, position.y,
-                nearest.x, nearest.y
-            )
-            const currentDist = Phaser.Math.Distance.Between(
-                position.x, position.y,
-                current.x, current.y
-            )
-            return currentDist < nearestDist ? current : nearest
-        })
+        return this.workers.size;
     }
 
-    // Cleanup
-    public clearAll(): void {
-        console.log(`Removing ${this.workers.length} workers`)
-        
-        // Destroy all workers
-        this.workers.forEach(worker => {
-            try {
-                worker.destroy()
-            } catch (error) {
-                console.error('Error destroying worker during clearAll:', error)
-            }
-        })
-
-        // Clear collections
-        this.workers.length = 0
-        this.workerLastPositions.clear()
-
-        // Clear storage
+    public findNearestDepositPoint(workerType: WorkerType, position: WorkerPosition): WorkerPosition | null {
         try {
-            sessionStorage.removeItem(this.STORAGE_KEY)
+            const config = this.registry.getWorkerConfig(workerType);
+            if (!config) return null;
+
+            const buildingManager = (this.scene as any).buildingManager;
+            if (!buildingManager) {
+                console.log(`WorkerManager: No buildingManager available`);
+                return null;
+            }
+
+            let bestPosition: WorkerPosition | null = null;
+            let bestDistance = Infinity;
+
+            config.depositTargets.forEach(target => {
+                target.targetTypes.forEach(buildingType => {
+                    const buildings = buildingManager.getBuildingsByType(buildingType);
+                    buildings.forEach((building: any) => {
+                        const buildingPos = building.getPosition();
+                        const distance = Phaser.Math.Distance.Between(
+                            position.x, position.y,
+                            buildingPos.x, buildingPos.y
+                        );
+
+                        if (distance < bestDistance) {
+                            bestDistance = distance;
+                            bestPosition = buildingPos;
+                        }
+                    });
+                });
+            });
+
+            return bestPosition;
+
         } catch (error) {
-            console.error('Error clearing worker storage:', error)
+            console.error('WorkerManager: Error finding deposit point:', error);
+            return null;
         }
+    }
+
+    public pauseAllWorkers(): void {
+        this.workers.forEach(worker => {
+            worker.forceIdle();
+        });
+        console.log('WorkerManager: Paused all workers');
+    }
+
+    public resumeAllWorkers(): void {
+        this.workers.forEach(worker => {
+            worker.forceIdle(); // This will restart their main loop
+        });
+        console.log('WorkerManager: Resumed all workers');
+    }
+
+    public clearAllWorkers(): void {
+        console.log('WorkerManager: Clearing all workers');
+
+        this.workers.forEach((worker, id) => {
+            try {
+                worker.destroy();
+            } catch (error) {
+                console.error(`WorkerManager: Error destroying worker ${id}:`, error);
+            }
+        });
+
+        this.workers.clear();
+        this.nextWorkerId = 1;
+
+        // Notifier Vue.js
+        window.dispatchEvent(new CustomEvent('game:allWorkersCleared'));
+    }
+
+    public update(): void {
+        // Les workers se mettent à jour automatiquement via leur boucle interne
+        // Cette méthode peut être utilisée pour des tâches de maintenance globales
+
+        // Nettoyer les workers détruits
+        const destroyedWorkers: string[] = [];
+        this.workers.forEach((worker, id) => {
+            if (!worker.scene || !worker.active) {
+                destroyedWorkers.push(id);
+            }
+        });
+
+        destroyedWorkers.forEach(id => {
+            console.log(`WorkerManager: Cleaning up destroyed worker ${id}`);
+            this.workers.delete(id);
+        });
     }
 
     public destroy(): void {
-        this.clearAll()
+        this.clearAllWorkers();
+    }
+
+    // Méthodes de compatibilité avec l'ancien système
+    public createLumberjack(x: number, y: number, depositPoint?: WorkerPosition): Worker | null {
+        return this.createWorker(WorkerType.LUMBERJACK, x, y, depositPoint);
+    }
+
+    public getWorkers(): readonly Worker[] {
+        return this.getAllWorkers();
+    }
+
+    public getWorkersByType_Legacy(type: any): readonly Worker[] {
+        // Conversion pour l'ancien système
+        if (typeof type === 'string') {
+            return this.getWorkersByType(type as WorkerType);
+        }
+        return [];
     }
 }

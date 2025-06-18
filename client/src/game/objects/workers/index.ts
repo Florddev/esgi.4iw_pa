@@ -1,13 +1,12 @@
-export { Worker, WorkerState } from './Worker'
-export { Lumberjack } from './Lumberjack'
-export { WorkerRegistry } from '../../services/WorkerRegistry'
+export { Worker } from './Worker';
 
-// Re-export types
-export type { 
-    WorkerType, 
-    WorkerConfig, 
-    WorkerStats, 
-    WorkerPosition, 
-    WorkerTarget,
-    WorkerSaveData
-} from '../../types'
+export type {
+    WorkerConfig,
+    WorkerType,
+    WorkerState,
+    WorkerPosition,
+    WorkerStats,
+    WorkerActionType,
+    WorkerTargetConfig,
+    WorkerAnimationConfig
+} from '../../types/WorkerConfigTypes';

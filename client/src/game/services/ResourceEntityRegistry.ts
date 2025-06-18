@@ -1,4 +1,4 @@
-import { ResourceEntityConfig, ResourceEntityType } from '../types/ResourceEntityTypes';
+import { type ResourceEntityConfig, ResourceEntityType } from '../types';
 import { RESOURCE_ENTITY_CONFIGS } from '../configs/ResourceEntityConfigs';
 
 export class ResourceEntityRegistry {

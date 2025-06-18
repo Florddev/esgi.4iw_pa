@@ -1,4 +1,4 @@
-import { ResourceDefinition, ResourceType, ResourceCategory } from '../types/ResourceSystemTypes';
+import { type ResourceDefinition, ResourceType, ResourceCategory } from '../types';
 import { RESOURCE_DEFINITIONS } from '../configs/ResourceConfigs';
 
 export class ResourceRegistry {

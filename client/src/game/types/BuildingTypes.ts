@@ -1,4 +1,4 @@
-import type { ResourceType } from './ResourceTypes';
+import type { ResourceType } from './ResourceSystemTypes';
 
 export interface BuildingCost {
     readonly [resourceType: string]: number;
@@ -11,15 +11,24 @@ export interface BuildingConfig {
     readonly icon: string;
     readonly cost: BuildingCost;
     readonly description?: string;
-    readonly category?: BuildingCategory;
+    //readonly category?: BuildingCategory;
 }
 
+export enum BuildingType {
+    HOUSE = 'house',
+    SAWMILL = 'sawmill',
+    MINE = 'mine',
+    FARM = 'farm',
+    STORAGE = 'storage'
+}
+/*
 export enum BuildingCategory {
     HOUSING = 'housing',
     PRODUCTION = 'production', 
     STORAGE = 'storage',
     UTILITY = 'utility'
 }
+*/
 
 export interface BuildingDimensions {
     readonly tilesWidth: number;

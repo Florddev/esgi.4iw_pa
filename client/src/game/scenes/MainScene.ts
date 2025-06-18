@@ -14,6 +14,9 @@ import { BuildingRegistry } from '../services/BuildingRegistry'
 import { AnimationRegistry } from '../services/AnimationRegistry'
 import { AnimationUtils } from '../utils/AnimationUtils'
 import { ResourceEntityManager } from '../services/ResourceEntityManager'
+import {WorkerType} from "../types";
+import type {WorkerPosition} from "../types";
+import {Worker} from "../objects/workers";
 
 interface LayerConfig {
   layer: Phaser.Tilemaps.TilemapLayer
@@ -380,6 +383,12 @@ export class MainScene extends Scene {
 
     this.rebuildPathfindingGrid()
     this.setupVueEventListeners()
+
+    /* TODO: Test a supprimer: */
+    this.time.delayedCall(2000, () => {
+      this.testWorkerSystem();
+    });
+    /* ----------------------- */
   }
 
   private setupVueResourceSync(): void {
@@ -645,6 +654,79 @@ export class MainScene extends Scene {
     }
   }
 
+  public createWorker(type: WorkerType, x?: number, y?: number): Worker | null {
+    const spawnX = x || this.player.x + 32;
+    const spawnY = y || this.player.y;
+
+    console.log(`MainScene: Creating worker ${type} at (${spawnX}, ${spawnY})`);
+
+    // Trouver le point de dépôt le plus proche
+    const depositPoint = this.findNearestDepositPoint(type, { x: spawnX, y: spawnY });
+
+    const worker = this.workerManager.createWorker(type, spawnX, spawnY, depositPoint);
+
+    if (worker) {
+      console.log(`MainScene: Successfully created worker ${type}`);
+    } else {
+      console.error(`MainScene: Failed to create worker ${type}`);
+    }
+
+    return worker;
+  }
+
+
+// Méthode de test pour vérifier que tout fonctionne
+  public testWorkerSystem(): void {
+    console.log('=== TESTING WORKER SYSTEM ===');
+
+    // Vérifier ResourceEntityManager
+    if (this.resourceEntityManager) {
+      const trees = this.resourceEntityManager.getEntitiesByType('tree');
+      console.log(`Found ${trees.length} trees`);
+      trees.forEach((tree, index) => {
+        console.log(`Tree ${index}: (${tree.x}, ${tree.y})`);
+      });
+    } else {
+      console.error('ResourceEntityManager not available!');
+    }
+
+    // Vérifier BuildingManager
+    if (this.buildingManager) {
+      const sawmills = this.buildingManager.getBuildingsByType('sawmill');
+      console.log(`Found ${sawmills.length} sawmills`);
+    } else {
+      console.error('BuildingManager not available!');
+    }
+
+    // Vérifier WorkerManager
+    if (this.workerManager) {
+      console.log('WorkerManager is available');
+
+      // Tester la création d'un worker
+      const testWorker = this.createWorker(WorkerType.LUMBERJACK, this.player.x + 50, this.player.y);
+      if (testWorker) {
+        console.log('Test worker created successfully!');
+
+        // Vérifier la configuration
+        const config = testWorker.getConfig();
+        console.log('Worker config:', config);
+      } else {
+        console.error('Failed to create test worker!');
+      }
+    } else {
+      console.error('WorkerManager not available!');
+    }
+
+    console.log('=== END WORKER SYSTEM TEST ===');
+  }
+
+  private findNearestDepositPoint(workerType: WorkerType, position: WorkerPosition): WorkerPosition | undefined {
+    // Pour l'instant, retourner une position par défaut
+    // TODO: Améliorer avec la logique du BuildingManager
+    return { x: position.x + 100, y: position.y };
+  }
+
+
   private createWorkerAtPosition(
     workerType: string, 
     x: number, 
@@ -659,13 +741,20 @@ export class MainScene extends Scene {
     return null
   }
 
-  public createLumberjack(x: number, y: number, depositPoint?: { x: number, y: number }): any {
-    if (!this.workerManager) {
-      console.error('WorkerManager not available')
-      return null
-    }
-    
-    return this.workerManager.createLumberjack(x, y, depositPoint)
+  public createLumberjack(x?: number, y?: number, depositPoint?: WorkerPosition): Worker | null {
+    return this.createWorker(WorkerType.LUMBERJACK, x, y);
+  }
+
+  public pauseAllWorkers(): void {
+    this.workerManager.pauseAllWorkers();
+  }
+
+  public resumeAllWorkers(): void {
+    this.workerManager.resumeAllWorkers();
+  }
+
+  public getWorkerStats(): any {
+    return this.workerManager.getWorkerStats();
   }
 
   private copyGrid(source: number[][]): number[][] {
@@ -1119,7 +1208,7 @@ export class MainScene extends Scene {
     this.player.update()
     this.resourceEntityManager.updateEntities()
     this.buildingManager.updateBuildings(this.player)
-    this.workerManager.updateWorkers()
+    this.workerManager.update();
 
     if (process.env.NODE_ENV === 'development') {
       this.debugResourceSync();

@@ -1,7 +1,7 @@
 import { Scene } from 'phaser';
 import { AnimationType } from '../services/AnimationRegistry';
 import { AnimationUtils } from '../utils/AnimationUtils';
-import { ResourceEntityConfig, ResourceEntitySpawnData } from '../types/ResourceEntityTypes';
+import { type ResourceEntityConfig, type ResourceEntitySpawnData } from '../types/ResourceEntityTypes';
 import { ResourceType } from '../types/ResourceSystemTypes';
 import { ResourceManager } from '../services/ResourceManager';
 
@@ -496,11 +496,16 @@ export class ResourceEntity extends Phaser.Physics.Arcade.Sprite {
         });
     }
 
-    // === API PUBLIQUE POUR LES WORKERS ===
-
     public isAvailableForHarvest(harvester: any): boolean {
-        return !this.state.isDestroyed && !this.state.isBeingHarvested &&
-            (this.state.currentHarvester === null || this.state.currentHarvester === harvester);
+        const isAvailable = !this.state.isDestroyed &&
+            (this.state.currentHarvester === null ||
+                this.state.currentHarvester === harvester);
+
+        console.log(`ResourceEntity: Availability check for ${harvester.config?.name || 'unknown'}: ${isAvailable}`);
+        console.log(`  - destroyed: ${this.state.isDestroyed}`);
+        console.log(`  - current harvester: ${this.state.currentHarvester === harvester ? 'same worker' : 'different/none'}`);
+
+        return isAvailable;
     }
 
     public setHarvester(harvester: any): boolean {
@@ -533,46 +538,58 @@ export class ResourceEntity extends Phaser.Physics.Arcade.Sprite {
     }
 
     public async workerHarvest(worker: any): Promise<boolean> {
-        return new Promise((resolve) => {
-            if (this.state.isDestroyed || this.state.isBeingHarvested || this.state.currentHarvester !== worker) {
-                resolve(false);
-                return;
+        console.log(`ResourceEntity: Worker ${worker.config?.name || 'unknown'} harvest started. Health: ${this.state.currentHealth}/${this.config.health}`);
+
+        // Vérifier si cette entité peut être récoltée
+        if (this.state.isDestroyed) {
+            console.log(`ResourceEntity: Cannot harvest - entity is destroyed`);
+            return false;
+        }
+
+        // Enregistrer ce travailleur comme le récolteur actuel
+        this.state.currentHarvester = worker;
+
+        // Infliger des dégâts
+        this.state.currentHealth -= this.config.damagePerHit;
+        console.log(`ResourceEntity: Took ${this.config.damagePerHit} damage, health now: ${this.state.currentHealth}/${this.config.health}`);
+
+        // Mettre à jour l'interface utilisateur
+        this.updateHealthBar(true);
+        this.spawnParticles();
+
+        // Jouer l'animation de coup
+        try {
+            await this.animationHandler.action(this.config.animations.hit as AnimationType);
+            console.log(`ResourceEntity: Hit animation completed`);
+        } catch (error) {
+            console.error(`ResourceEntity: Error playing hit animation:`, error);
+        }
+
+        // Vérifier si l'entité est détruite après ce coup
+        if (this.state.currentHealth <= 0) {
+            console.log(`ResourceEntity: Entity destroyed after hit`);
+
+            // Jouer l'animation de destruction
+            try {
+                this.animationHandler.action(this.config.animations.destroy as AnimationType);
+            } catch (error) {
+                console.error(`ResourceEntity: Error playing destroy animation:`, error);
             }
 
-            this.state.currentHealth -= this.config.damagePerHit;
-            this.updateHealthBar(true);
-            this.spawnParticles();
+            // Donner les ressources au travailleur
+            this.giveResourcesToWorker(worker);
 
-            this.animationHandler.action(this.config.animations.hit as AnimationType).then(() => {
-                if (this.state.currentHealth <= 0 && !this.state.isDestroyed) {
-                    this.animationHandler.action(this.config.animations.destroy as AnimationType);
+            // Marquer comme détruit
+            this.state.isDestroyed = true;
+            this.state.isBlocking = false;
 
-                    // NOUVEAU: Worker récupère les ressources avec notification
-                    this.giveResourcesToWorkerWithNotification(worker);
+            // Nettoyer et préparer la réapparition
+            this.cleanup();
 
-                    this.state.isDestroyed = true;
-                    this.cleanup();
-                    resolve(true);
-                } else {
-                    resolve(false);
-                }
-            });
+            return true;
+        }
 
-            // Fallback timeout
-            this.scene.time.delayedCall(2000, () => {
-                if (!this.state.isDestroyed && this.state.currentHealth <= 0) {
-                    this.animationHandler.action(this.config.animations.destroy as AnimationType);
-
-                    this.giveResourcesToWorkerWithNotification(worker);
-
-                    this.state.isDestroyed = true;
-                    this.cleanup();
-                    resolve(true);
-                } else if (!this.state.isDestroyed) {
-                    resolve(false);
-                }
-            });
-        });
+        return true;
     }
 
     private giveResourcesToWorkerWithNotification(worker: any): void {
@@ -616,18 +633,35 @@ export class ResourceEntity extends Phaser.Physics.Arcade.Sprite {
             return;
         }
 
+        console.log('ResourceEntity: Giving resources to worker');
+
         this.config.resources.forEach(resource => {
             if (Math.random() <= resource.chance) {
                 try {
                     // Le worker gère son propre inventaire
                     const added = worker.addToInventory(resource.type, resource.amount);
-                    console.log(`ResourceEntity: Gave ${added} ${resource.type} to worker`);
+
+                    if (added > 0) {
+                        console.log(`ResourceEntity: Gave ${added} ${resource.type} to worker`);
+
+                        // NOTIFICATION: Informer Vue qu'un worker a récolté (pour stats/UI)
+                        window.dispatchEvent(new CustomEvent('game:workerResourceHarvested', {
+                            detail: {
+                                workerType: worker.constructor.name.toLowerCase(),
+                                resourceType: resource.type,
+                                amount: added,
+                                entityType: this.config.type,
+                                timestamp: Date.now()
+                            }
+                        }));
+                    }
                 } catch (error) {
                     console.error(`ResourceEntity: Error giving resource to worker:`, error);
                 }
             }
         });
     }
+
 
     public getResourceNames(): string[] {
         try {
