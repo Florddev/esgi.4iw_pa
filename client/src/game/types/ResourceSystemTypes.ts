@@ -4,6 +4,7 @@ export enum ResourceType {
     STONE = 'stone',
     FOOD = 'food',
     METAL_ORE = 'metal_ore',
+    COAL_ORE = 'coal_ore',
 
     // Processed materials
     PLANKS = 'planks',
@@ -16,6 +17,7 @@ export enum ResourceType {
 }
 
 export enum ResourceCategory {
+    ORE = 'ORE',
     RAW_MATERIAL = 'raw_material',
     PROCESSED = 'processed',
     CONSUMABLE = 'consumable',

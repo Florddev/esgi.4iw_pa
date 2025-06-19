@@ -1,4 +1,6 @@
 import { Scene } from 'phaser'
+type Scene = typeof Scene;
+
 import { AnimationType } from '../services/AnimationRegistry'
 import { AnimationUtils } from '../utils/AnimationUtils'
 

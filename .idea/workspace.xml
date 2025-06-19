@@ -4,7 +4,25 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="352ec0bd-8df2-47e0-b707-7082ddcb4a7c" name="Changes" comment="" />
+    <list default="true" id="352ec0bd-8df2-47e0-b707-7082ddcb4a7c" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.flatignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/public/assets/maps/map.json" beforeDir="false" afterPath="$PROJECT_DIR$/client/public/assets/maps/map.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/configs/ResourceConfigs.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/configs/ResourceConfigs.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/configs/ResourceEntityConfigs.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/configs/ResourceEntityConfigs.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/configs/WorkerConfigs.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/configs/WorkerConfigs.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/objects/Player.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/objects/Player.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/objects/ResourceEntity.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/objects/ResourceEntity.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/objects/TiledBuilding.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/objects/TiledBuilding.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/objects/workers/Worker.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/objects/workers/Worker.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/objects/workers/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/objects/workers/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/scenes/MainScene.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/scenes/MainScene.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/services/AnimationRegistry.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/services/AnimationRegistry.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/services/WorkerRegistry.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/services/WorkerRegistry.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/types/ResourceEntityTypes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/types/ResourceEntityTypes.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/types/ResourceSystemTypes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/types/ResourceSystemTypes.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/stores/gameStore.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/stores/gameStore.ts" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -30,6 +48,7 @@
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;core/refactoring&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -70,6 +89,9 @@
       <updated>1750003330418</updated>
       <workItem from="1750003332124" duration="5209000" />
       <workItem from="1750062451478" duration="10628000" />
+      <workItem from="1750266099772" duration="221000" />
+      <workItem from="1750267885323" duration="1505000" />
+      <workItem from="1750317793283" duration="290000" />
     </task>
     <servers />
   </component>

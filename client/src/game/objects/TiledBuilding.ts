@@ -1,13 +1,14 @@
 import { Scene } from 'phaser';
+type Scene = typeof Scene;
+
 import { BuildingInfoUI } from '../ui/BuildingInfoUI';
 import {
     ResourceType,
-    ResourceStorage,
+    type ResourceStorage,
     createResourceStorage,
-    BuildingPosition,
-    BuildingDimensions
+    type BuildingPosition,
+    type BuildingDimensions
 } from '../types';
-import { ResourceSystemTypes } from '../types/ResourceSystemTypes';
 import { ResourceManager } from '../services/ResourceManager';
 
 interface BuildingZone {

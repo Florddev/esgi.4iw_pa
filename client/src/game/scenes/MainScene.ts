@@ -89,6 +89,14 @@ export class MainScene extends Scene {
       frameWidth: 32,
       frameHeight: 34
     })
+    this.load.spritesheet('rock', 'sprites/rock.png', {
+      frameWidth: 26,
+      frameHeight: 25
+    })
+    this.load.spritesheet('coal_vein', 'sprites/coal_vein.png', {
+      frameWidth: 26,
+      frameHeight: 25
+    })
     this.load.spritesheet('health-bar', 'ui/health-bar.png', {
       frameWidth: 21,
       frameHeight: 13
@@ -125,8 +133,9 @@ export class MainScene extends Scene {
     }
 
     // Initialize dialog service
-    this.dialogService = new DialogService(this)
+    // this.dialogService = new DialogService(this)
 
+    /*
     // Show welcome message
     this.dialogService.showDialog({
       text: "Welcome to TinyTown! To start your adventure, you need to harvest wood.",
@@ -138,6 +147,9 @@ export class MainScene extends Scene {
         })
       }
     })
+
+     */
+
 
     this.uiScene = this.scene.add('UIScene', {
       create: function () {
@@ -157,6 +169,7 @@ export class MainScene extends Scene {
           this.hoverCursor.setPosition(pointer.x, pointer.y)
         })
 
+        /*
         this.woodText = this.add.text(20, 20, 'Wood: 0', {
           fontSize: '32px',
           color: '#ffffff',
@@ -164,6 +177,7 @@ export class MainScene extends Scene {
           strokeThickness: 4,
           fontStyle: 'bold'
         }).setDepth(100000)
+        */
       }
     }, true)
 
@@ -184,11 +198,13 @@ export class MainScene extends Scene {
     this.buildingRegistry = BuildingRegistry.getInstance()
 
     // Launch resource UI
-    this.scene.launch('ResourceUI')
+    //this.scene.launch('ResourceUI')
 
+    /*
     this.events.on('addResource', (type: ResourceType, amount: number) => {
       this.resourceManager.addResource(type, amount, 'game_event')
     })
+    */
 
     // Create and configure layers automatically
     allLayers.forEach(layerData => {
@@ -232,6 +248,7 @@ export class MainScene extends Scene {
     this.physics.world.bounds.width = this.map.widthInPixels
     this.physics.world.bounds.height = this.map.heightInPixels
 
+    /*
     // Add semi-transparent background for better readability
     const padding = 8
     const textBg = this.add.rectangle(
@@ -242,16 +259,18 @@ export class MainScene extends Scene {
       0x000000,
       0.5
     ).setScrollFactor(0).setDepth(9998)      // Just below text
-
+    */
+    /*
     // Listen for wood addition event
     this.events.on('addWood', (amount: number) => {
       this.resources.wood += amount
       this.events.emit('resourcesUpdated', this.resources)
     })
-
+    */
     this.resourceEntityManager = new ResourceEntityManager(this)
     this.resourceEntityManager.spawnFromMap(this.map)
 
+    /*
     this.game.events.on('selectBuilding', (buildingType: string) => {
       const buildingUI = this.scene.get('BuildingUI') as BuildingUI
 
@@ -270,6 +289,8 @@ export class MainScene extends Scene {
         this.showResourceError()
       }
     })
+    */
+
 
     // Listen for cleanup event
     this.game.events.on('clearBuildings', () => {
@@ -279,9 +300,10 @@ export class MainScene extends Scene {
     this.initializeBuildingSystem()
 
     // Start building UI scene
-    this.scene.launch('BuildingUI')
+    //this.scene.launch('BuildingUI')
 
     // Debug collision visualization in development
+    /*
     if (process.env.NODE_ENV === 'development' && false) {
       this.mapLayers.forEach((config, name) => {
         if (config.hasCollision) {
@@ -294,7 +316,7 @@ export class MainScene extends Scene {
           })
         }
       })
-    }
+    }*/
 
     this.buildingManager = new BuildingManager(this)
     this.workerManager = new WorkerManager(this)
@@ -307,6 +329,7 @@ export class MainScene extends Scene {
     )
 
     // Go through each layer with hasCollision = true
+
     this.mapLayers.forEach((layerConfig) => {
       if (!layerConfig.hasCollision) return // Ignore those without collision
       const layer = layerConfig.layer

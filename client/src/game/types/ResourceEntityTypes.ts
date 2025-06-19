@@ -1,6 +1,7 @@
 export enum ResourceEntityType {
     TREE = 'tree',
     ROCK = 'rock',
+    COAL_VEIN = 'coal_vein',
     BERRY_BUSH = 'berry_bush',
     CRYSTAL = 'crystal'
 }

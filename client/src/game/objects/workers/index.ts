@@ -1,4 +1,4 @@
-export { Worker } from './Worker';
+export { Worker } from './Worker.ts';
 
 export type {
     WorkerConfig,

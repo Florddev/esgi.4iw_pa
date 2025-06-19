@@ -11,8 +11,9 @@ import { ResourceType } from '../../types/ResourceSystemTypes';
 import { ResourceEntity } from '../ResourceEntity';
 import { TiledBuilding } from '../TiledBuilding';
 import { AnimationUtils } from '../../utils/AnimationUtils';
+import GameObject = Phaser.GameObjects.GameObject;
 
-export class Worker extends Phaser.GameObjects.Sprite {
+export class Worker extends Phaser.GameObjects.Sprite implements Phaser.GameObjects.GameObject {
     protected config: WorkerConfig;
     protected state: WorkerState = WorkerState.IDLE;
     protected inventory = new Map<ResourceType, number>();
@@ -50,9 +51,13 @@ export class Worker extends Phaser.GameObjects.Sprite {
         console.log(`Worker ${this.config.name} created at (${x}, ${y})`);
     }
 
+    private getThisGameObject(): Phaser.GameObjects.GameObject {
+        return this as unknown as Phaser.GameObjects.GameObject;
+    }
+
     private initializeWorker(): void {
-        this.scene.add.existing(this);
-        this.scene.physics.add.existing(this);
+        this.scene.add.existing(this.getThisGameObject());
+        this.scene.physics.add.existing(this.getThisGameObject());
 
         // Configuration physique
         const body = this.body as Phaser.Physics.Arcade.Body;
@@ -78,7 +83,7 @@ export class Worker extends Phaser.GameObjects.Sprite {
 
     private setupAnimations(): void {
         try {
-            AnimationUtils.initializeEntityAnimations(this, 'player');
+            AnimationUtils.initializeEntityAnimations(this.getThisGameObject(), 'player');
             this.play(this.config.animations.idle);
         } catch (error) {
             console.warn('Worker: Could not setup animations:', error);
@@ -335,7 +340,7 @@ export class Worker extends Phaser.GameObjects.Sprite {
         }
 
         // Mouvement physique simple
-        this.scene.physics.moveTo(this, targetPos.x, targetPos.y, this.config.moveSpeed);
+        this.scene.physics.moveTo(this.getThisGameObject(), targetPos.x, targetPos.y, this.config.moveSpeed);
 
         // Calculer le temps de voyage et déclencher l'arrivée
         const distance = Phaser.Math.Distance.Between(this.x, this.y, targetPos.x, targetPos.y);
@@ -608,7 +613,7 @@ export class Worker extends Phaser.GameObjects.Sprite {
                 if (availableSpace <= 0) return;
 
                 target.resourceTypes.forEach(resourceType => {
-                    const buildingAmount = building.getBuildingResourceAmount(resourceType);
+                    const buildingAmount = building.getBuildingResource(resourceType);
                     if (buildingAmount > 0) {
                         const toHarvest = Math.min(buildingAmount, availableSpace);
                         const removed = building.removeResourceFromBuilding(resourceType, toHarvest);

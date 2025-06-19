@@ -15,6 +15,9 @@ export enum AnimationType {
   TREE_IDLE = 'tree-idle',
   TREE_HIT = 'tree-hit',
   TREE_DESTROY = 'tree-destroy',
+
+  // Coal Vein animation
+  COAL_VEIN_IDLE = 'coal-vein-idle',
   
   // Effects animations
   LEAVES_FALL = 'leaves-fall'
@@ -139,6 +142,16 @@ export class AnimationRegistry {
         frameRate: 10,
         repeat: 0,
         description: 'Tree destruction animation'
+      },
+
+      // Coal animations
+      {
+        key: AnimationType.COAL_VEIN_IDLE,
+        texture: 'coal_vein',
+        frames: { start: 1, end: 1 },
+        frameRate: 6,
+        repeat: -1,
+        description: 'Coal vien idle swaying animation'
       },
 
       // Effects animations
@@ -433,11 +446,12 @@ export class AnimationRegistry {
   /**
    * Preload animations for specific entity types
    */
-  public getAnimationsForEntityType(entityType: 'player' | 'worker' | 'tree' | 'effects'): AnimationType[] {
+  public getAnimationsForEntityType(entityType: 'player' | 'worker' | 'tree' | 'effects' | 'coal_vein'): AnimationType[] {
     const entityAnimations = {
       player: [AnimationType.PLAYER_IDLE, AnimationType.PLAYER_WALK, AnimationType.PLAYER_CHOP],
       worker: [AnimationType.WORKER_IDLE, AnimationType.WORKER_WALK, AnimationType.WORKER_CHOP],
       tree: [AnimationType.TREE_IDLE, AnimationType.TREE_HIT, AnimationType.TREE_DESTROY],
+      coal_vein: [AnimationType.COAL_VEIN_IDLE],
       effects: [AnimationType.LEAVES_FALL]
     }
 

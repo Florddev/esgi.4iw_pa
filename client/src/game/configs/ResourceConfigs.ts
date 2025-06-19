@@ -1,4 +1,4 @@
-import { ResourceDefinition, ResourceType, ResourceCategory } from '../types/ResourceSystemTypes';
+import { type ResourceDefinition, ResourceType, ResourceCategory } from '../types/ResourceSystemTypes';
 
 export const RESOURCE_DEFINITIONS: Record<ResourceType, ResourceDefinition> = {
     [ResourceType.WOOD]: {
@@ -35,6 +35,18 @@ export const RESOURCE_DEFINITIONS: Record<ResourceType, ResourceDefinition> = {
         baseValue: 3,
         stackSize: 20,
         isConsumable: true,
+        canTrade: true
+    },
+    [ResourceType.COAL_ORE]: {
+        id: ResourceType.COAL_ORE,
+        name: 'Charbon',
+        description: 'Minerai de charbon brut',
+        category: ResourceCategory.ORE,
+        iconTexture: 'metal-ore-icon',
+        color: 0x654321,
+        baseValue: 4,
+        stackSize: 30,
+        isConsumable: false,
         canTrade: true
     },
     [ResourceType.METAL_ORE]: {

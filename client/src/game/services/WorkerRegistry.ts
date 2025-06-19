@@ -1,7 +1,7 @@
 import { Scene } from 'phaser';
 type Scene = typeof Scene;
 
-import { Worker } from '../objects/workers/Worker';
+import { Worker } from '../objects/workers/Worker.ts';
 import { type WorkerConfig, WorkerType, type WorkerPosition } from '../types/WorkerConfigTypes';
 import { WORKER_CONFIGS } from '../configs/WorkerConfigs';
 

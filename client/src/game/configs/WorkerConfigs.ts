@@ -12,7 +12,7 @@ export const WORKER_CONFIGS: Record<WorkerType, WorkerConfig> = {
 
         carryCapacity: 10,
         harvestSpeed: 3000,
-        moveSpeed: 70,
+        moveSpeed: 30,
         workRadius: 500,
 
         harvestTargets: [{
