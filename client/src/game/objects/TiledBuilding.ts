@@ -37,7 +37,6 @@ export class TiledBuilding {
     private readonly resourceManager: ResourceManager;
     private readonly config: BuildingInteractionConfig;
 
-    // Phaser objects
     private readonly layers: Phaser.Tilemaps.TilemapLayer[] = [];
     private readonly map: Phaser.Tilemaps.Tilemap;
     private readonly tileset: Phaser.Tilemaps.Tileset;
@@ -45,13 +44,11 @@ export class TiledBuilding {
     private readonly interactiveZones: BuildingZone[] = [];
     private readonly layerStates = new Map<string, LayerState>();
 
-    // Player interaction
     private playerInside: boolean = false;
     private playerStationaryTimer: Phaser.Time.TimerEvent | null = null;
     private lastPlayerPosition: BuildingPosition | null = null;
     private lastInteractionTime: number = 0;
 
-    // Resource storage
     private readonly resourceStorage: ResourceStorage;
 
     constructor(scene: Scene, x: number, y: number, templateKey: string) {
@@ -457,8 +454,7 @@ export class TiledBuilding {
         }
     
         this.lastInteractionTime = currentTime;
-        
-        // Émettre un événement pour Vue.js au lieu d'utiliser l'ancien système Phaser
+
         window.dispatchEvent(new CustomEvent('game:buildingInfo', {
             detail: { building: this }
         }));
@@ -516,7 +512,6 @@ export class TiledBuilding {
         return new Map(this.resourceStorage.stored);
     }
 
-    // Getters publics
     public getMap(): Phaser.Tilemaps.Tilemap {
         return this.map;
     }
@@ -546,7 +541,6 @@ export class TiledBuilding {
         return names[this.buildingType] || this.buildingType;
     }
 
-    // Nettoyage
     public destroy(): void {
         this.layers.forEach(layer => layer.destroy());
         this.interactiveZones.forEach(zone => zone.zone.destroy());

@@ -150,12 +150,10 @@ export class TiledBuildingPreview {
     }
 
     private tileHasCollision(tile: Phaser.Tilemaps.Tile): boolean {
-        // Vérifier les collisions standards
         if (tile.properties?.collides) {
             return true;
         }
 
-        // Vérifier les collisions personnalisées du Tile Collision Editor
         if (tile.tileset) {
             const collisionData = tile.tileset.getTileData(tile.index);
             if (collisionData?.objectgroup?.objects?.length > 0) {
@@ -265,8 +263,7 @@ export class TiledBuildingPreview {
                 console.error('Erreur lors de la destruction d\'une layer de preview:', error);
             }
         });
-        
-        // Vider le tableau
+
         this.layers.length = 0;
     }
 }

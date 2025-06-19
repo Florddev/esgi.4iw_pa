@@ -1,4 +1,5 @@
 import { Scene } from 'phaser';
+type Scene = typeof Scene;
 
 export interface DialogConfig {
     readonly text: string;
@@ -43,7 +44,7 @@ export class DialogService {
         backgroundColor: 0x000000,
         backgroundAlpha: 0.7,
         padding: 20,
-        wordWrapWidth: 0 // Sera calculé dynamiquement
+        wordWrapWidth: 0
     };
 
     constructor(scene: Scene) {
@@ -124,7 +125,6 @@ export class DialogService {
     }
 
     private addToQueue(dialog: QueuedDialog): void {
-        // Insérer en respectant la priorité
         let insertIndex = this.dialogQueue.length;
         
         for (let i = 0; i < this.dialogQueue.length; i++) {
@@ -163,8 +163,7 @@ export class DialogService {
 
         this.clearPreviousDialog();
         this.createDialogElements(dialog.text, style);
-        
-        // Programmer la fermeture automatique
+
         this.scene.time.delayedCall(dialog.duration!, () => {
             if (this.currentDialogId === dialog.id) {
                 this.executeCallback(dialog.callback);
@@ -191,7 +190,6 @@ export class DialogService {
     private createDialogScene(): void {
         if (!this.dialogUIScene) return;
 
-        // Initialiser les objets graphiques de base
         (this.dialogUIScene as any).dialogGraphics = this.dialogUIScene.add.graphics();
         (this.dialogUIScene as any).dialogText = this.dialogUIScene.add.text(0, 0, '', {
             fontSize: '24px',
@@ -208,16 +206,13 @@ export class DialogService {
 
         if (!graphics || !dialogText) return;
 
-        // Calculer les dimensions
         const textHeight = 120;
         const dialogY = window.innerHeight - textHeight;
 
-        // Dessiner le fond
         graphics.clear();
         graphics.fillStyle(style.backgroundColor, style.backgroundAlpha);
         graphics.fillRect(0, dialogY, window.innerWidth, textHeight);
 
-        // Configurer le texte
         dialogText.setStyle({
             fontSize: style.fontSize,
             color: style.color,
@@ -227,7 +222,6 @@ export class DialogService {
         dialogText.setText(text);
         dialogText.setPosition(style.padding, dialogY + style.padding);
 
-        // Rendre la scène visible
         this.dialogUIScene.scene.setVisible(true);
         this.dialogUIScene.scene.setActive(true);
     }
@@ -267,7 +261,6 @@ export class DialogService {
         return `dialog_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     }
 
-    // Méthodes utilitaires
     public showWelcomeSequence(): void {
         this.showDialog({
             text: "Bienvenue dans TinyTown! Pour commencer votre aventure, vous devez récolter du bois.",
@@ -307,7 +300,6 @@ export class DialogService {
         });
     }
 
-    // Nettoyage
     public destroy(): void {
         this.clearQueue();
         

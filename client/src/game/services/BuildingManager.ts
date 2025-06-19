@@ -1,4 +1,6 @@
 import { Scene } from 'phaser';
+type Scene = typeof Scene;
+
 import { TiledBuilding } from '../objects/TiledBuilding';
 import type { BuildingPosition, BuildingConfig } from '../types';
 
@@ -27,8 +29,7 @@ export class BuildingManager {
     public placeBuilding(type: string, x: number, y: number): TiledBuilding {
         const templateKey = `${type}-template`;
         const building = new TiledBuilding(this.scene, x, y, templateKey);
-        
-        // Configurer les collisions avec le joueur
+
         const player = (this.scene as any).player;
         if (player) {
             building.setupCollisions(player);
@@ -37,8 +38,7 @@ export class BuildingManager {
         this.buildings.push(building);
         this.saveState();
         this.rebuildPathfindingGrid();
-        
-        // Émettre l'événement
+
         this.emit('buildingPlaced', building);
         
         return building;
@@ -52,8 +52,7 @@ export class BuildingManager {
         building.destroy();
         this.saveState();
         this.rebuildPathfindingGrid();
-        
-        // Émettre l'événement
+
         this.emit('buildingDestroyed', building);
         
         return true;
@@ -125,8 +124,7 @@ export class BuildingManager {
             if (!stored) return;
 
             const state: StoredBuilding[] = JSON.parse(stored);
-            
-            // Valider les données avant de les charger
+
             const validBuildings = state.filter(data => 
                 typeof data.type === 'string' &&
                 typeof data.x === 'number' &&
@@ -143,7 +141,6 @@ export class BuildingManager {
             
         } catch (error) {
             console.error('Erreur chargement bâtiments:', error);
-            // Nettoyer le storage corrompu
             sessionStorage.removeItem(this.STORAGE_KEY);
         }
     }
@@ -159,7 +156,7 @@ export class BuildingManager {
     }
 
     public getBuildings(): readonly TiledBuilding[] {
-        return [...this.buildings]; // Copie défensive
+        return [...this.buildings];
     }
 
     public clearAll(): void {
@@ -182,8 +179,7 @@ export class BuildingManager {
         }
         
         this.rebuildPathfindingGrid();
-        
-        // Émettre l'événement
+
         this.emit('allBuildingsCleared');
     }
     
@@ -197,8 +193,7 @@ export class BuildingManager {
             console.error('Erreur lors de la reconstruction de la grille de pathfinding:', error);
         }
     }
-    
-    // Système d'événements
+
     public on<K extends keyof BuildingManagerEvents>(
         event: K, 
         callback: BuildingManagerEvents[K]
@@ -234,8 +229,7 @@ export class BuildingManager {
             });
         }
     }
-    
-    // Méthodes utilitaires
+
     public getBuildingCount(): number {
         return this.buildings.length;
     }
@@ -249,20 +243,17 @@ export class BuildingManager {
     }
     
     public canPlaceBuildingAt(x: number, y: number, width: number, height: number): boolean {
-        // Vérifier s'il y a déjà un bâtiment à cette position
         return !this.buildings.some(building => {
             const pos = building.getPosition();
             const dim = building.getDimensions();
-            
-            // Vérifier le chevauchement
+
             return !(x >= pos.x + (dim.tilesWidth * 16) ||
                     x + (width * 16) <= pos.x ||
                     y >= pos.y + (dim.tilesHeight * 16) ||
                     y + (height * 16) <= pos.y);
         });
     }
-    
-    // Nettoyage
+
     public destroy(): void {
         this.clearAll();
         this.eventCallbacks.clear();

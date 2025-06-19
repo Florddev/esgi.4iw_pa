@@ -6,13 +6,26 @@
   <component name="ChangeListManager">
     <list default="true" id="352ec0bd-8df2-47e0-b707-7082ddcb4a7c" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/config.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/objects/Player.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/objects/Player.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/game/objects/ResourceEntity.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/objects/ResourceEntity.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/game/objects/TiledBuilding.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/objects/TiledBuilding.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/objects/TiledBuildingPreview.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/objects/TiledBuildingPreview.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/game/objects/workers/Worker.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/objects/workers/Worker.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/game/scenes/MainScene.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/scenes/MainScene.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/services/AnimationRegistry.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/services/AnimationRegistry.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/services/BuildingManager.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/services/BuildingManager.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/services/DialogService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/services/DialogService.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/game/services/ResourceEntityManager.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/services/ResourceEntityManager.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/services/WorkerRegistry.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/services/WorkerRegistry.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/utils/AnimationUtils.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/utils/AnimationUtils.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/services/ResourceInventory.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/services/ResourceInventory.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/services/ResourceManager.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/services/ResourceManager.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/services/WorkerPathfinder.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/services/WorkerPathfinder.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/services/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/services/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/types/WorkerConfigTypes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/types/WorkerConfigTypes.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/ui/BuildingInfoUI.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/ui/BuildingInfoUI.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/ui/BuildingUI.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/ui/BuildingUI.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/ui/components/ResourceDisplay.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/ui/components/ResourceDisplay.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/ui/composables/useGameState.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/ui/composables/useGameState.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/stores/gameStore.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/stores/gameStore.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />

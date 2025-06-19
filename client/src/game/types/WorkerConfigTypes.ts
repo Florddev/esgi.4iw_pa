@@ -56,20 +56,16 @@ export interface WorkerConfig {
     description: string;
     texture: string;
 
-    // Capacités
     carryCapacity: number;
-    harvestSpeed: number; // millisecondes
+    harvestSpeed: number;
     moveSpeed: number;
     workRadius: number;
 
-    // Actions possibles - UTILISER WorkerTargetConfig
     harvestTargets: WorkerTargetConfig[];
     depositTargets: WorkerTargetConfig[];
 
-    // Animations
     animations: WorkerAnimationConfig;
 
-    // Apparence
     tint?: number;
     scale?: number;
 }

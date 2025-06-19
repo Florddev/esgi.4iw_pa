@@ -1,26 +1,25 @@
 import { Scene } from 'phaser'
+type Scene = typeof Scene;
 
 export enum AnimationType {
-  // Player animations
+  // Player
   PLAYER_IDLE = 'player-idle',
   PLAYER_WALK = 'player-walk',
   PLAYER_CHOP = 'player-chop',
   
-  // Worker animations
+  // Worker
   WORKER_IDLE = 'worker-idle',
   WORKER_WALK = 'worker-walk',
   WORKER_CHOP = 'worker-chop',
+  LEAVES_FALL = 'leaves-fall',
   
-  // Tree animations
+  // Tree
   TREE_IDLE = 'tree-idle',
   TREE_HIT = 'tree-hit',
   TREE_DESTROY = 'tree-destroy',
 
-  // Coal Vein animation
-  COAL_VEIN_IDLE = 'coal-vein-idle',
-  
-  // Effects animations
-  LEAVES_FALL = 'leaves-fall'
+  // Coal Vein
+  COAL_VEIN_IDLE = 'coal-vein-idle'
 }
 
 export interface AnimationConfig {
@@ -66,7 +65,6 @@ export class AnimationRegistry {
 
   private initializeAnimations(): void {
     const animationConfigs: AnimationConfig[] = [
-      // Player animations
       {
         key: AnimationType.PLAYER_IDLE,
         texture: 'player-idle',
@@ -175,9 +173,6 @@ export class AnimationRegistry {
     })
   }
 
-  /**
-   * Register animations for a specific scene
-   */
   public registerAnimationsForScene(scene: Scene, animationTypes?: AnimationType[]): void {
     const typesToRegister = animationTypes || Array.from(this.animations.keys())
     
@@ -195,7 +190,6 @@ export class AnimationRegistry {
         return
       }
 
-      // Only register if not already registered in this scene
       if (!scene.anims.exists(type)) {
         try {
           scene.anims.create({
@@ -206,8 +200,7 @@ export class AnimationRegistry {
           })
 
           sceneAnimations.add(type)
-          
-          // Update registration state
+
           const state = this.registrationState.get(type)!
           this.registrationState.set(type, {
             ...state,
@@ -223,30 +216,18 @@ export class AnimationRegistry {
     })
   }
 
-  /**
-   * Get animation configuration
-   */
   public getAnimationConfig(type: AnimationType): AnimationConfig | undefined {
     return this.animations.get(type)
   }
 
-  /**
-   * Get all available animation types
-   */
   public getAvailableAnimations(): readonly AnimationType[] {
     return Array.from(this.animations.keys())
   }
 
-  /**
-   * Check if animation is registered in scene
-   */
   public isAnimationRegistered(scene: Scene, type: AnimationType): boolean {
     return scene.anims.exists(type)
   }
 
-  /**
-   * Play animation on sprite with advanced options
-   */
   public playAnimation(
     sprite: Phaser.GameObjects.Sprite, 
     type: AnimationType, 
@@ -265,7 +246,6 @@ export class AnimationRegistry {
         return
       }
 
-      // Set up frame callbacks if specified
       if (options.hitFrame !== undefined && options.onHitFrame) {
         const handleFrameUpdate = (anim: Phaser.Animations.Animation, frame: Phaser.Animations.AnimationFrame) => {
           if (frame.index === options.hitFrame && options.onHitFrame) {
@@ -280,7 +260,6 @@ export class AnimationRegistry {
         })
       }
 
-      // Set up completion callback
       const handleComplete = () => {
         if (options.onComplete) {
           options.onComplete()
@@ -291,18 +270,13 @@ export class AnimationRegistry {
       if (config.repeat === 0) {
         sprite.once('animationcomplete', handleComplete)
       } else {
-        // For looping animations, resolve immediately
         resolve()
       }
 
-      // Play the animation
       sprite.play(type, true)
     })
   }
 
-  /**
-   * Stop animation and optionally play another
-   */
   public stopAnimation(sprite: Phaser.GameObjects.Sprite, fallbackType?: AnimationType): void {
     sprite.anims.stop()
 
@@ -311,9 +285,6 @@ export class AnimationRegistry {
     }
   }
 
-  /**
-   * Get animation statistics
-   */
   public getAnimationStats(): {
     readonly totalAnimations: number
     readonly registeredAnimations: number
@@ -347,9 +318,6 @@ export class AnimationRegistry {
     }
   }
 
-  /**
-   * Validate that all required textures are loaded
-   */
   public validateTextures(scene: Scene): {
     readonly isValid: boolean
     readonly missingTextures: string[]
@@ -357,12 +325,10 @@ export class AnimationRegistry {
     const missingTextures: string[] = []
     const requiredTextures = new Set<string>()
 
-    // Collect all required textures
     this.animations.forEach(config => {
       requiredTextures.add(config.texture)
     })
 
-    // Check if textures exist
     for (const texture of requiredTextures) {
       if (!scene.textures.exists(texture)) {
         missingTextures.push(texture)
@@ -375,9 +341,6 @@ export class AnimationRegistry {
     }
   }
 
-  /**
-   * Cleanup animations for a scene
-   */
   public cleanupSceneAnimations(scene: Scene): void {
     const sceneAnimations = this.sceneAnimations.get(scene)
     
@@ -396,9 +359,6 @@ export class AnimationRegistry {
     }
   }
 
-  /**
-   * Get animation duration in milliseconds
-   */
   public getAnimationDuration(type: AnimationType): number {
     const config = this.animations.get(type)
     if (!config) return 0
@@ -407,26 +367,17 @@ export class AnimationRegistry {
     return (frameCount / config.frameRate) * 1000
   }
 
-  /**
-   * Check if animation is looping
-   */
   public isLoopingAnimation(type: AnimationType): boolean {
     const config = this.animations.get(type)
     return config ? config.repeat === -1 : false
   }
 
-  /**
-   * Get animations by texture
-   */
   public getAnimationsByTexture(texture: string): AnimationType[] {
     return Array.from(this.animations.entries())
       .filter(([_, config]) => config.texture === texture)
       .map(([type, _]) => type)
   }
 
-  /**
-   * Register custom animation at runtime
-   */
   public registerCustomAnimation(config: AnimationConfig): boolean {
     if (this.animations.has(config.key)) {
       console.warn(`Animation ${config.key} already exists`)
@@ -443,9 +394,6 @@ export class AnimationRegistry {
     return true
   }
 
-  /**
-   * Preload animations for specific entity types
-   */
   public getAnimationsForEntityType(entityType: 'player' | 'worker' | 'tree' | 'effects' | 'coal_vein'): AnimationType[] {
     const entityAnimations = {
       player: [AnimationType.PLAYER_IDLE, AnimationType.PLAYER_WALK, AnimationType.PLAYER_CHOP],

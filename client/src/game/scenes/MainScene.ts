@@ -206,7 +206,6 @@ export class MainScene extends Scene {
     })
     */
 
-    // Create and configure layers automatically
     allLayers.forEach(layerData => {
       const layer = this.map.createLayer(layerData.name, tileset, 0, 0)
       if (!layer) return
@@ -232,10 +231,8 @@ export class MainScene extends Scene {
       })
     })
 
-    // Player configuration
     this.player.setDepth(1)
 
-    // Camera configuration
     this.cameras.main.startFollow(this.player)
     this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels)
     this.physics.world.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels)
@@ -244,7 +241,6 @@ export class MainScene extends Scene {
     const zoomLevel = minDimension / 280 // Adjust 800 according to your needs
     this.cameras.main.setZoom(Math.min(3.3, zoomLevel)) // Limit maximum zoom to 2
 
-    // World bounds configuration
     this.physics.world.bounds.width = this.map.widthInPixels
     this.physics.world.bounds.height = this.map.heightInPixels
 
@@ -292,7 +288,6 @@ export class MainScene extends Scene {
     */
 
 
-    // Listen for cleanup event
     this.game.events.on('clearBuildings', () => {
       this.buildingManager.clearAll()
     })
@@ -328,8 +323,6 @@ export class MainScene extends Scene {
       () => Array(this.map.width).fill(0)
     )
 
-    // Go through each layer with hasCollision = true
-
     this.mapLayers.forEach((layerConfig) => {
       if (!layerConfig.hasCollision) return // Ignore those without collision
       const layer = layerConfig.layer
@@ -355,7 +348,6 @@ export class MainScene extends Scene {
       }
     })
 
-    // Then assign this global grid to easystar
     const fullGrid = this.copyGrid(this.baseGrid)
     this.easyStar.setGrid(fullGrid)
     this.easyStar.setAcceptableTiles([0])
@@ -363,18 +355,14 @@ export class MainScene extends Scene {
     this.easyStar.setIterationsPerCalculation(10000)
     this.easyStar.disableCornerCutting()
 
-    // MOUSE CLICK LISTENER FOR MOVEMENT
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      // Convert click position to tile coordinate
       const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y)
       let targetTileX = Math.floor(worldPoint.x / this.tileWidth)
       let targetTileY = Math.floor(worldPoint.y / this.tileHeight)
 
-      // Get player "tile" position
       const playerTileX = Math.floor(this.player.x / this.tileWidth)
       const playerTileY = Math.floor(this.player.y / this.tileHeight)
 
-      // If target tile has collision, find nearest accessible tile
       if (this.baseGrid[targetTileY][targetTileX] === 1) {
         const nearestTile = this.findNearestWalkableTile(targetTileX, targetTileY)
         if (nearestTile) {
@@ -386,7 +374,6 @@ export class MainScene extends Scene {
         }
       }
 
-      // Calculate path with EasyStar
       this.easyStar.findPath(
         playerTileX,
         playerTileY,
@@ -416,12 +403,10 @@ export class MainScene extends Scene {
 
   private setupVueResourceSync(): void {
     try {
-      // Écouter les événements de changement de ressources du ResourceManager
       this.resourceManager.getGlobalInventory().on('change', (event: any) => {
         this.notifyVueResourceChange(event);
       });
 
-      // Notifier Vue que le jeu est prêt avec les ressources initiales
       this.notifyGameReady();
 
       console.log('Vue resource sync configured successfully');
@@ -432,7 +417,6 @@ export class MainScene extends Scene {
 
   private notifyVueResourceChange(event: any): void {
     try {
-      // Émettre vers Vue.js via window events
       window.dispatchEvent(new CustomEvent('game:resourceUpdate', {
         detail: {
           type: event.type,
@@ -461,17 +445,14 @@ export class MainScene extends Scene {
   }
 
   private setupAnimations(): void {
-    // Preload all necessary animations for this scene
     const entityTypes: Array<'player' | 'worker' | 'tree' | 'effects'> = ['player', 'worker', 'tree', 'effects']
     AnimationUtils.preloadSceneAnimations(this, entityTypes)
 
-    // Validate that all required textures are loaded
     const validation = this.animationRegistry.validateTextures(this)
     if (!validation.isValid) {
       console.warn('Missing textures for animations:', validation.missingTextures)
     }
 
-    // Log animation stats in development
     if (process.env.NODE_ENV === 'development') {
       AnimationUtils.logAnimationStats()
     }
@@ -487,7 +468,6 @@ export class MainScene extends Scene {
 
   private notifyGameReady(): void {
     try {
-      // Synchroniser avec Vue.js
       window.dispatchEvent(new CustomEvent('game:ready', {
         detail: {
           resourceManager: this.resourceManager,
@@ -496,7 +476,6 @@ export class MainScene extends Scene {
         }
       }));
 
-      // Déclencher une mise à jour initiale des ressources
       this.triggerInitialResourceSync();
 
       console.log('Game ready notification sent to Vue with resources');
@@ -510,7 +489,6 @@ export class MainScene extends Scene {
       const inventory = this.resourceManager.getGlobalInventory();
       const allResources = inventory.getAllResources();
 
-      // Notifier chaque ressource individuellement pour déclencher la réactivité
       allResources.forEach((amount, type) => {
         if (amount > 0) {
           window.dispatchEvent(new CustomEvent('game:resourceUpdate', {
@@ -531,18 +509,15 @@ export class MainScene extends Scene {
   }
 
   private setupVueEventListeners(): void {
-    // Listen for building selection from Vue.js
     const handleBuildingSelection = (event: CustomEvent) => {
       const buildingType = event.detail
       this.onBuildingSelectedFromVue(buildingType)
     }
-  
-    // Listen for building deselection
+
     const handleBuildingDeselection = () => {
       this.onBuildingDeselectedFromVue()
     }
-  
-    // Listen for worker creation
+
     const handleWorkerCreation = (event: CustomEvent) => {
       const { type, positionHint } = event.detail
       this.onWorkerCreationFromVue(type, positionHint)
@@ -558,18 +533,15 @@ export class MainScene extends Scene {
     console.log('Building selected from Vue:', buildingType)
     
     this.selectedBuildingType = buildingType
-    
-    // Clean up old preview if it exists
+
     if (this.buildingPreview) {
       this.buildingPreview.destroy()
       this.buildingPreview = null
     }
-  
-    // Create new preview based on Tiled template
+
     const templateKey = `${buildingType}-template`
     this.buildingPreview = new TiledBuildingPreview(this, templateKey)
-  
-    // Temporarily hide normal cursor
+
     if (this.uiScene) {
       this.uiScene.defaultCursor.setVisible(false)
       this.uiScene.hoverCursor.setVisible(false)
@@ -582,14 +554,12 @@ export class MainScene extends Scene {
     console.log('Building deselected from Vue')
     
     this.selectedBuildingType = null
-    
-    // Remove preview
+
     if (this.buildingPreview) {
       this.buildingPreview.destroy()
       this.buildingPreview = null
     }
-  
-    // Restore cursor
+
     if (this.uiScene) {
       this.uiScene.defaultCursor.setVisible(true)
     }
@@ -655,7 +625,6 @@ export class MainScene extends Scene {
     const worker = this.createWorkerAtPosition(workerType, spawnPosition.x, spawnPosition.y, depositPoint)
 
     if (worker) {
-      // AMÉLIORATION: Notification avec plus de détails
       window.dispatchEvent(new CustomEvent('game:workerCreated', {
         detail: {
           worker,
@@ -683,9 +652,7 @@ export class MainScene extends Scene {
 
     console.log(`MainScene: Creating worker ${type} at (${spawnX}, ${spawnY})`);
 
-    // Trouver le point de dépôt le plus proche
     const depositPoint = this.findNearestDepositPoint(type, { x: spawnX, y: spawnY });
-
     const worker = this.workerManager.createWorker(type, spawnX, spawnY, depositPoint);
 
     if (worker) {
@@ -698,11 +665,9 @@ export class MainScene extends Scene {
   }
 
 
-// Méthode de test pour vérifier que tout fonctionne
   public testWorkerSystem(): void {
     console.log('=== TESTING WORKER SYSTEM ===');
 
-    // Vérifier ResourceEntityManager
     if (this.resourceEntityManager) {
       const trees = this.resourceEntityManager.getEntitiesByType('tree');
       console.log(`Found ${trees.length} trees`);
@@ -713,7 +678,6 @@ export class MainScene extends Scene {
       console.error('ResourceEntityManager not available!');
     }
 
-    // Vérifier BuildingManager
     if (this.buildingManager) {
       const sawmills = this.buildingManager.getBuildingsByType('sawmill');
       console.log(`Found ${sawmills.length} sawmills`);
@@ -721,16 +685,13 @@ export class MainScene extends Scene {
       console.error('BuildingManager not available!');
     }
 
-    // Vérifier WorkerManager
     if (this.workerManager) {
       console.log('WorkerManager is available');
 
-      // Tester la création d'un worker
       const testWorker = this.createWorker(WorkerType.LUMBERJACK, this.player.x + 50, this.player.y);
       if (testWorker) {
         console.log('Test worker created successfully!');
 
-        // Vérifier la configuration
         const config = testWorker.getConfig();
         console.log('Worker config:', config);
       } else {
@@ -768,6 +729,7 @@ export class MainScene extends Scene {
     return this.createWorker(WorkerType.LUMBERJACK, x, y);
   }
 
+  /*
   public pauseAllWorkers(): void {
     this.workerManager.pauseAllWorkers();
   }
@@ -779,25 +741,22 @@ export class MainScene extends Scene {
   public getWorkerStats(): any {
     return this.workerManager.getWorkerStats();
   }
+  */
 
   private copyGrid(source: number[][]): number[][] {
-    // Double "map" or slice to get deep copy
     return source.map(row => [...row])
   }
 
   private rebuildPathfindingGrid() {
     const fullGrid = this.copyGrid(this.baseGrid)
 
-    // Add building collisions
     this.buildingManager.getBuildings().forEach(building => {
       const { x, y } = building.getPosition()
       const { tilesWidth, tilesHeight } = building.getDimensions()
 
-      // Convert to tile indices
       const tileX = Math.floor(x / this.tileWidth)
       const tileY = Math.floor(y / this.tileHeight)
 
-      // Get building's Tiled sub-map
       const buildingMap = building.getMap()
 
       buildingMap.layers.forEach(layerData => {
@@ -843,7 +802,6 @@ export class MainScene extends Scene {
   }
 
   public showResourceError(message: string = 'Insufficient resources!'): void {
-    // Show temporary error message
     const text = this.add.text(
       this.cameras.main.centerX,
       100,
@@ -868,10 +826,8 @@ export class MainScene extends Scene {
   }
 
   private initializeBuildingSystem(): void {
-    // Écouter les événements de sélection de bâtiment
     this.game.events.on('selectBuilding', this.onBuildingSelected, this);
 
-    // Gérer le mouvement de la souris pour l'aperçu
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       if (this.buildingPreview) {
         const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
@@ -880,7 +836,6 @@ export class MainScene extends Scene {
       }
     });
 
-    // Gérer le clic pour placer le bâtiment
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (this.buildingPreview && this.buildingPreview.isValidPlacement()) {
         this.placeBuilding(pointer);
@@ -889,25 +844,19 @@ export class MainScene extends Scene {
   }
 
   private markBuildingCollisions(building: TiledBuilding) {
-    // Récupérer la sub-map Tiled du bâtiment
     const buildingMap = building.getMap();
-    // Borne en tuiles dans la map principale
     const offsetX = Math.floor(building.getPosition().x / this.tileWidth);
     const offsetY = Math.floor(building.getPosition().y / this.tileHeight);
 
-    // Pour chaque layer du buildingMap
     buildingMap.layers.forEach(layerData => {
-      // Récupérer l'objet layer
       const layer = buildingMap.getLayer(layerData.name);
       if (!layer) return;
 
-      // Parcourir toutes les tuiles
       for (let ty = 0; ty < layer.tilemapLayer.layer.height; ty++) {
         for (let tx = 0; tx < layer.tilemapLayer.layer.width; tx++) {
           const tile = layer.tilemapLayer.getTileAt(tx, ty);
           if (!tile) continue;
 
-          // Si la tuile du bâtiment est bloquante
           const hasCollidesProp = !!(tile.properties && tile.properties.collides);
           const tileData = tile.tileset.getTileData(tile.index);
           const hasCollisionShapes = tileData
@@ -916,11 +865,9 @@ export class MainScene extends Scene {
             && tileData.objectgroup.objects.length > 0;
 
           if (hasCollidesProp || hasCollisionShapes) {
-            // On convertit en coord. de la map globale
             const gx = offsetX + tx;
             const gy = offsetY + ty;
 
-            // On marque dans baseGrid
             if (
               gy >= 0 && gy < this.baseGrid.length &&
               gx >= 0 && gx < this.baseGrid[0].length
@@ -944,32 +891,27 @@ export class MainScene extends Scene {
 
     let isValid = true;
 
-    // 1. Vérifier les limites de la carte
     if (tileX < 0 || tileY < 0 ||
       tileX + tilesWidth > this.map.width ||
       tileY + tilesHeight > this.map.height) {
       isValid = false;
     } else {
-      // 2. Vérifier les collisions pour chaque tile dans la zone
       for (let x = 0; x < tilesWidth; x++) {
         for (let y = 0; y < tilesHeight; y++) {
           const currentTileX = tileX + x;
           const currentTileY = tileY + y;
 
-          // Vérifier chaque layer
           for (const [layerName, config] of this.mapLayers.entries()) {
             const layer = config.layer;
             const tile = layer.getTileAt(currentTileX, currentTileY);
 
             if (tile) {
-              // Vérifier les collisions standards (propriété collides)
               if (config.hasCollision && tile.properties && tile.properties.collides) {
                 isValid = false;
                 break;
               }
 
-              // Vérifier si le tile a une collision personnalisée
-              if (tile.tileset) {  // Vérifier que le tile a un tileset
+              if (tile.tileset) {
                 const customCollisions = tile.tileset.getTileData(tile.index);
                 if (customCollisions && customCollisions.objectgroup) {
                   isValid = false;
@@ -981,7 +923,6 @@ export class MainScene extends Scene {
 
           if (!isValid) break;
 
-          // 3. Vérifier les collisions avec les autres bâtiments
           const hasBuildingCollision = this.buildings.some(building => {
             const pos = building.getPosition();
             const buildingTileX = Math.floor(pos.x / 16);
@@ -1003,7 +944,6 @@ export class MainScene extends Scene {
       }
     }
 
-    // Debug en mode développement
     if (process.env.NODE_ENV === 'development') {
       const worldTileX = Math.floor(worldPoint.x / 16);
       const worldTileY = Math.floor(worldPoint.y / 16);
@@ -1020,16 +960,13 @@ export class MainScene extends Scene {
   private onBuildingSelected(buildingType: string): void {
     this.selectedBuildingType = buildingType;
 
-    // Supprimer l'ancien aperçu s'il existe
     if (this.buildingPreview) {
       this.buildingPreview.destroy();
     }
 
-    // Créer un nouvel aperçu en utilisant le template Tiled
     const templateKey = `${buildingType}-template`;
     this.buildingPreview = new TiledBuildingPreview(this, templateKey);
 
-    // Masquer temporairement le curseur normal
     if (this.uiScene) {
       this.uiScene.defaultCursor.setVisible(false);
       this.uiScene.hoverCursor.setVisible(false);
@@ -1060,10 +997,8 @@ export class MainScene extends Scene {
       const snappedX = Math.floor(worldPoint.x / 16) * 16
       const snappedY = Math.floor(worldPoint.y / 16) * 16
 
-      // Obtenir le coût avant déduction pour la notification
       const cost = this.getBuildingCost(this.selectedBuildingType)
 
-      // Déduire les ressources
       this.deductBuildingCost(this.selectedBuildingType)
 
       const newBuilding = this.buildingManager.placeBuilding(
@@ -1075,7 +1010,6 @@ export class MainScene extends Scene {
       this.markBuildingCollisions(newBuilding)
       this.rebuildPathfindingGrid()
 
-      // AMÉLIORATION: Notification détaillée avec coût
       window.dispatchEvent(new CustomEvent('game:buildingPlaced', {
         detail: {
           building: newBuilding,
@@ -1155,24 +1089,18 @@ export class MainScene extends Scene {
   }
 
   private findNearestWalkableTile(targetX: number, targetY: number): { x: number, y: number } | null {
-    // Distance maximale de recherche
     const maxSearchDistance = 5;
 
-    // Explorer en spirale autour du point cible
     for (let d = 1; d <= maxSearchDistance; d++) {
-      // Vérifier toutes les tuiles à la distance d
       for (let offsetY = -d; offsetY <= d; offsetY++) {
         for (let offsetX = -d; offsetX <= d; offsetX++) {
-          // Ne vérifier que les tuiles sur le "périmètre" du carré actuel
           if (Math.abs(offsetX) === d || Math.abs(offsetY) === d) {
             const checkX = targetX + offsetX;
             const checkY = targetY + offsetY;
 
-            // Vérifier que la tuile est dans les limites de la map
             if (checkX >= 0 && checkX < this.map.width &&
               checkY >= 0 && checkY < this.map.height) {
 
-              // Vérifier si la tuile est marchable (= 0 dans notre grille)
               if (this.baseGrid[checkY][checkX] === 0) {
                 return { x: checkX, y: checkY };
               }
@@ -1181,22 +1109,14 @@ export class MainScene extends Scene {
         }
       }
     }
-
-    return null; // Aucune tuile marchable trouvée dans le rayon de recherche
+    return null;
   }
-
-  // private addTree(x: number, y: number): void {
-  //   const tree = new Tree(this, x, y)
-  //   tree.setupPlayerCollision(this.player)
-  //   this.trees.push(tree)
-  // }
 
   private addWood(amount: number): void {
     this.woodCount += amount;
     const newText = `Bois: ${this.woodCount}`;
     this.uiScene.woodText.setText(newText);
 
-    // Vérifier si l'objectif est atteint
     if (this.woodCount >= this.targetWood && !this.hasShownCompletionDialog) {
       this.hasShownCompletionDialog = true;
       this.dialogService.showDialog({
@@ -1221,7 +1141,6 @@ export class MainScene extends Scene {
   }
 
   destroy(): void {
-    // Cleanup animations for this scene
     this.animationRegistry.cleanupSceneAnimations(this)
     super.destroy()
   }
@@ -1238,7 +1157,6 @@ export class MainScene extends Scene {
   }
 
   private debugResourceSync(): void {
-    // Vérifier la synchronisation toutes les 5 secondes en mode dev
     if (!this.lastSyncCheck) {
       this.lastSyncCheck = Date.now();
     }
@@ -1250,7 +1168,6 @@ export class MainScene extends Scene {
         const totalResources = this.resourceManager.getGlobalInventory().getTotalItems();
         console.log('Current total resources:', totalResources);
 
-        // Émettre un événement de debug
         window.dispatchEvent(new CustomEvent('game:resourceDebug', {
           detail: {
             totalResources,
@@ -1262,5 +1179,4 @@ export class MainScene extends Scene {
       }
     }
   }
-
 }

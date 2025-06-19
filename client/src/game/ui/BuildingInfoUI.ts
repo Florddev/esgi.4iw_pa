@@ -1,5 +1,5 @@
 import { ResourceManager } from '../services/ResourceManager';
-import { ResourceType } from '../types/ResourceTypes';
+import { ResourceType } from '../types/ResourceSystemTypes';
 import { ResourceDisplay } from './components/ResourceDisplay';
 
 export class BuildingInfoUI extends Phaser.Scene {

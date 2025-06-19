@@ -4,7 +4,7 @@ import { ResourceType, type ResourceStack } from '@/game/types/ResourceSystemTyp
 import { ResourceManager } from '@/game/services/ResourceManager';
 import { BuildingRegistry } from '@/game/services/BuildingRegistry';
 import type { TiledBuilding } from '@/game/objects/TiledBuilding';
-import type { Worker } from '@game/objects/workers/Worker.ts';
+import type { Worker } from '@/game/objects/workers/Worker.ts';
 
 interface GameState {
   isGameLoaded: boolean;

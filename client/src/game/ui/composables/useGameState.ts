@@ -10,21 +10,14 @@ export const useGameState = () => {
   const gameInstance = ref<GameInstance | null>(null)
   const isInitialized = ref(false)
 
-  // Game integration methods
   const initializeGameIntegration = (game: Phaser.Game) => {
     gameInstance.value = game
     isInitialized.value = true
 
-    // Set up event listeners for game state synchronization
     setupGameEventListeners()
-
-    // Initialize ResourceManager integration
     const resourceManager = ResourceManager.getInstance()
-
-    // Notify that the game is ready
     gameStore.setGameLoaded(true)
 
-    // Emit ready event
     window.dispatchEvent(new CustomEvent('game:ready', {
       detail: {
         resourceManager,
@@ -39,7 +32,6 @@ export const useGameState = () => {
       return
     }
 
-    // Wait for the main scene to be available
     const waitForMainScene = () => {
       const mainScene = gameInstance.value?.scene?.getScene('MainScene')
       if (!mainScene) {
@@ -50,7 +42,6 @@ export const useGameState = () => {
 
       console.log('MainScene found, setting up event listeners')
 
-      // Listen for resource updates from the game - NOW USING RESOURCEMANAGER
       const handleResourceUpdate = (type: ResourceType, amount: number) => {
         const resourceManager = ResourceManager.getInstance()
         const current = resourceManager.getResource(type)
@@ -63,17 +54,14 @@ export const useGameState = () => {
         }
       }
 
-      // Listen for building placement
       const handleBuildingPlaced = (building: any) => {
         gameStore.addBuilding(building)
-        
-        // Emit event for notifications
+
         window.dispatchEvent(new CustomEvent('game:buildingPlaced', {
           detail: { building }
         }))
       }
 
-      // Listen for building destruction
       const handleBuildingDestroyed = (building: any) => {
         gameStore.removeBuilding(building)
         
@@ -82,7 +70,6 @@ export const useGameState = () => {
         }))
       }
 
-      // Listen for worker creation
       const handleWorkerCreated = (event: CustomEvent) => {
         const { worker } = event.detail
         gameStore.addWorker(worker)
@@ -92,7 +79,6 @@ export const useGameState = () => {
         }))
       }
 
-      // Listen for worker removal
       const handleWorkerRemoved = (worker: any) => {
         gameStore.removeWorker(worker)
         
@@ -101,7 +87,6 @@ export const useGameState = () => {
         }))
       }
 
-      // Set up event handlers on the main scene
       try {
         mainScene.events.on('resourceUpdate', handleResourceUpdate)
         mainScene.events.on('buildingPlaced', handleBuildingPlaced)
@@ -115,11 +100,9 @@ export const useGameState = () => {
       }
     }
 
-    // Start waiting for the main scene
     waitForMainScene()
   }
 
-  // Game command methods
   const emitGameCommand = (command: string, data?: any) => {
     if (!gameInstance.value) {
       console.warn('Game instance not available for command:', command)
@@ -156,14 +139,11 @@ export const useGameState = () => {
     gameStore.hideBuildingInfo()
   }
 
-  // Resource management
   const addResource = (type: ResourceType, amount: number) => {
     const added = gameStore.addResource(type, amount)
-    
-    // Sync with game
+
     emitGameCommand('addResource', { type, amount: added })
-    
-    // Emit update event
+
     window.dispatchEvent(new CustomEvent('game:resourceUpdate', {
       detail: { type, amount: gameStore.state.value.resources.get(type) || 0 }
     }))
@@ -173,11 +153,9 @@ export const useGameState = () => {
 
   const removeResource = (type: ResourceType, amount: number) => {
     const removed = gameStore.removeResource(type, amount)
-    
-    // Sync with game
+
     emitGameCommand('removeResource', { type, amount: removed })
-    
-    // Emit update event
+
     window.dispatchEvent(new CustomEvent('game:resourceUpdate', {
       detail: { type, amount: gameStore.state.value.resources.get(type) || 0 }
     }))
@@ -185,9 +163,7 @@ export const useGameState = () => {
     return removed
   }
 
-  // External event handlers
   const setupExternalEventListeners = () => {
-    // Listen for UI commands
     const handleSelectBuilding = (event: CustomEvent) => {
       selectBuilding(event.detail)
     }
@@ -207,27 +183,22 @@ export const useGameState = () => {
       const { type, positionHint } = event.detail
       const effectivePositionHint = positionHint || 'near_player'
 
-      // Émettre directement vers MainScene
       emitGameCommand('createWorkerCommand', { type, positionHint: effectivePositionHint })
     }
 
     const handleBuildingPlacementComplete = (event: CustomEvent) => {
       const { buildingType } = event.detail
-      // Déselectionner le bâtiment après placement
       gameStore.selectBuilding(null)
 
       console.log('Building placement completed:', buildingType)
     }
 
-    // Listen for building placement cancellation
     const handleBuildingPlacementCancelled = () => {
-      // Déselectionner le bâtiment si l'annulation vient du jeu
       gameStore.selectBuilding(null)
 
       console.log('Building placement cancelled from game')
     }
 
-    // Listen for resource updates from the game
     const handleResourceUpdate = (event: CustomEvent) => {
       const { type, amount } = event.detail
       gameStore.updateResource(type, amount)
@@ -253,7 +224,6 @@ export const useGameState = () => {
     }
   }
 
-  // Lifecycle
   onMounted(() => {
     const cleanup = setupExternalEventListeners()
     

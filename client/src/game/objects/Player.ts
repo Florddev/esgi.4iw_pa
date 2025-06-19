@@ -54,23 +54,23 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     private setupHitbox(): void {
         const { bodyWidth, bodyHeight } = this.config
-        this.body.setSize(bodyWidth, bodyHeight)
 
         const offsetX = (96 - bodyWidth) / 2
         const offsetY = (64 - bodyHeight) / 1.8
-        this.body.setOffset(offsetX, offsetY)
+
+        if(this.body) {
+            this.body.setSize(bodyWidth, bodyHeight)
+            this.body.setOffset(offsetX, offsetY)
+        }
     }
 
     private setupAnimations(): void {
-        // Initialize player animations using the registry
         AnimationUtils.initializeEntityAnimations(this, 'player')
-        
-        // Create animation handler for this sprite
+
         this.animationHandler = AnimationUtils.createAnimationHandler(this)
     }
 
     public setPath(path: PathNode[]): void {
-        // Remove the first point if it corresponds to the current position
         if (path.length > 0) {
             const firstTile = path[0]
             const currentTile = this.getCurrentTilePosition()
@@ -80,7 +80,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             }
         }
 
-        this.path = [...path] // Defensive copy
+        this.path = [...path]
         this.currentTargetIndex = 0
     }
 
@@ -105,7 +105,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         
         try {
             if (onHitFrame) {
-                // Play chop animation with hit frame callback (frame 8 = index 7)
                 await this.animationHandler.action(AnimationType.PLAYER_CHOP, 7, onHitFrame)
             } else {
                 await this.animationHandler.action(AnimationType.PLAYER_CHOP)
@@ -128,10 +127,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         const isFlippedX = this.flipX
 
         if (absDx > absDy) {
-            // Horizontal movement dominant
             return (dx > 0 && !isFlippedX) || (dx < 0 && isFlippedX)
         } else {
-            // Vertical movement dominant - always considered as "facing the object"
             return true
         }
     }
@@ -163,7 +160,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     private tileToWorldPosition(tile: PathNode): Position {
         return {
-            x: tile.x * 16 + 8, // Centered on tile
+            x: tile.x * 16 + 8,
             y: tile.y * 16 + 8
         }
     }
@@ -207,10 +204,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     update(): void {
-        // If chopping, no movement
         if (this.isChopping) return
-
-        // Update movement based on path
         this.updatePathMovement()
     }
 }

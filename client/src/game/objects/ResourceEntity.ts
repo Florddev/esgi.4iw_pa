@@ -22,12 +22,10 @@ export class ResourceEntity extends Phaser.Physics.Arcade.Sprite {
     private readonly animationHandler: ReturnType<typeof AnimationUtils.createAnimationHandler>;
     private readonly resourceManager: ResourceManager;
 
-    // UI Elements
     private detectionZone?: Phaser.GameObjects.Zone;
     private stump?: Phaser.GameObjects.Sprite;
     private healthBar?: Phaser.GameObjects.Sprite;
 
-    // Timers
     private healingTimer?: Phaser.Time.TimerEvent;
 
     constructor(scene: Scene, x: number, y: number, config: ResourceEntityConfig, spawnData: ResourceEntitySpawnData) {
@@ -36,7 +34,6 @@ export class ResourceEntity extends Phaser.Physics.Arcade.Sprite {
         this.config = config;
         this.spawnData = spawnData;
 
-        // AJOUTÉ: Initialiser ResourceManager
         this.resourceManager = ResourceManager.getInstance();
 
         this.state = {
@@ -396,7 +393,6 @@ export class ResourceEntity extends Phaser.Physics.Arcade.Sprite {
     }
 
     private spawnParticles(): void {
-        // Utiliser le système d'animation pour les particules
         const particle = this.scene.add.sprite(this.x, this.y, 'leaves-hit')
             .setDepth(this.depth + 1);
 
@@ -430,7 +426,6 @@ export class ResourceEntity extends Phaser.Physics.Arcade.Sprite {
         this.healthBar?.setVisible(false);
         this.state.isBlocking = false;
 
-        // Rebuild pathfinding grid
         const mainScene = this.scene as any;
         if (mainScene.rebuildPathfindingGrid) {
             mainScene.rebuildPathfindingGrid();
@@ -452,7 +447,6 @@ export class ResourceEntity extends Phaser.Physics.Arcade.Sprite {
         this.state.currentHealth = this.config.health;
         this.updateHealthBar();
 
-        // Rebuild pathfinding grid
         const mainScene = this.scene as any;
         if (mainScene.rebuildPathfindingGrid) {
             mainScene.rebuildPathfindingGrid();
@@ -483,11 +477,10 @@ export class ResourceEntity extends Phaser.Physics.Arcade.Sprite {
     }
 
     public isAvailableForHarvest(harvester: any): boolean {
-        const isAvailable = !this.state.isDestroyed &&
-            (this.state.currentHarvester === null ||
-                this.state.currentHarvester === harvester);
-
-        return isAvailable;
+        return !this.state.isDestroyed && (
+                this.state.currentHarvester === null
+                || this.state.currentHarvester === harvester
+            );
     }
 
     public setHarvester(harvester: any): boolean {
@@ -520,47 +513,35 @@ export class ResourceEntity extends Phaser.Physics.Arcade.Sprite {
     }
 
     public async workerHarvest(worker: any): Promise<boolean> {
-        // Vérifier si cette entité peut être récoltée
         if (this.state.isDestroyed) {
             return false;
         }
 
-        // Enregistrer ce travailleur comme le récolteur actuel
         this.state.currentHarvester = worker;
-
-        // Infliger des dégâts
         this.state.currentHealth -= this.config.damagePerHit;
 
-        // Mettre à jour l'interface utilisateur
         this.updateHealthBar(true);
         this.spawnParticles();
 
-        // Jouer l'animation de coup
         try {
             await this.animationHandler.action(this.config.animations.hit as AnimationType);
         } catch (error) {
             console.error(`ResourceEntity: Error playing hit animation:`, error);
         }
 
-        // Vérifier si l'entité est détruite après ce coup
         if (this.state.currentHealth <= 0) {
-            // Jouer l'animation de destruction
             try {
                 this.animationHandler.action(this.config.animations.destroy as AnimationType);
             } catch (error) {
                 console.error(`ResourceEntity: Error playing destroy animation:`, error);
             }
 
-            // Donner les ressources au travailleur
             this.giveResourcesToWorker(worker);
 
-            // Marquer comme détruit
             this.state.isDestroyed = true;
             this.state.isBlocking = false;
 
-            // Nettoyer et préparer la réapparition
             this.cleanup();
-
             return true;
         }
 
@@ -576,7 +557,6 @@ export class ResourceEntity extends Phaser.Physics.Arcade.Sprite {
         this.config.resources.forEach(resource => {
             if (Math.random() <= resource.chance) {
                 try {
-                    // Le worker gère son propre inventaire
                     const added = worker.addToInventory(resource.type, resource.amount);
 
                     if (added > 0) {
@@ -643,7 +623,7 @@ export class ResourceEntity extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    // === GETTERS ===
+    // #region Getter
 
     public getConfig(): ResourceEntityConfig {
         return this.config;
@@ -665,7 +645,9 @@ export class ResourceEntity extends Phaser.Physics.Arcade.Sprite {
         return this.config.resources;
     }
 
-    // === CLEANUP ===
+    // #endregion
+
+    // #region Cleanup
 
     destroy(fromScene?: boolean): void {
         this.healthBar?.destroy();
@@ -690,4 +672,6 @@ export class ResourceEntity extends Phaser.Physics.Arcade.Sprite {
             this.stopHarvesting();
         }
     }
+
+    // #endregion
 }

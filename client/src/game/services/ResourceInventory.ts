@@ -1,4 +1,4 @@
-import { ResourceType, ResourceStack, ResourceTransaction, createResourceStack } from '../types/ResourceSystemTypes';
+import { ResourceType, type ResourceStack, type ResourceTransaction, createResourceStack } from '../types/ResourceSystemTypes';
 import { ResourceRegistry } from './ResourceRegistry';
 
 interface InventoryChangeEvent {

@@ -1,4 +1,3 @@
-import { Scene } from 'phaser';
 import EasyStar from 'easystarjs';
 
 export class WorkerPathfinder {

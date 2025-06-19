@@ -1,4 +1,3 @@
-// src/game/ui/BuildingUI.ts
 import type { BuildingConfig } from '../types/BuildingTypes';
 
 export class BuildingUI extends Phaser.Scene {

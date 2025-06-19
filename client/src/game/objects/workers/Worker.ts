@@ -11,28 +11,24 @@ import { ResourceType } from '../../types/ResourceSystemTypes';
 import { ResourceEntity } from '../ResourceEntity';
 import { TiledBuilding } from '../TiledBuilding';
 import { AnimationUtils } from '../../utils/AnimationUtils';
-import GameObject = Phaser.GameObjects.GameObject;
+import Sprite = Phaser.GameObjects.Sprite;
 
-export class Worker extends Phaser.GameObjects.Sprite implements Phaser.GameObjects.GameObject {
+export class Worker extends Sprite {
     protected config: WorkerConfig;
-    protected state: WorkerState = WorkerState.IDLE;
+    public state: WorkerState = WorkerState.IDLE;
     protected inventory = new Map<ResourceType, number>();
     protected currentTarget: ResourceEntity | TiledBuilding | null = null;
     protected depositPoint: WorkerPosition | null = null;
 
-    // Managers - récupérés depuis la scène
     protected resourceEntityManager: any;
     protected buildingManager: any;
 
-    // Pathfinding simple (sans EasyStar pour l'instant)
     protected isMoving: boolean = false;
 
-    // Timers
     protected actionTimer: Phaser.Time.TimerEvent | null = null;
     protected idleTimer: Phaser.Time.TimerEvent | null = null;
     protected mainLoopTimer: Phaser.Time.TimerEvent | null = null;
 
-    // Blacklist pour éviter les boucles
     protected blacklistedTargets = new Set<string>();
     protected lastBlacklistCleanup: number = 0;
 
@@ -50,26 +46,23 @@ export class Worker extends Phaser.GameObjects.Sprite implements Phaser.GameObje
     }
 
     private getThisGameObject(): Phaser.GameObjects.GameObject {
-        return this as unknown as Phaser.GameObjects.GameObject;
+        return this as any as Phaser.GameObjects.GameObject;
     }
 
     private initializeWorker(): void {
         this.scene.add.existing(this.getThisGameObject());
         this.scene.physics.add.existing(this.getThisGameObject());
 
-        // Configuration physique
         const body = this.body as Phaser.Physics.Arcade.Body;
         if (body) {
             body.setSize(12, 12);
             body.setOffset(2, 4);
         }
 
-        // Apparence
         this.setDepth(1);
         if (this.config.tint) this.setTint(this.config.tint);
         if (this.config.scale) this.setScale(this.config.scale);
 
-        // Initialiser l'inventaire
         this.config.harvestTargets.forEach(target => {
             target.resourceTypes.forEach(resourceType => {
                 this.inventory.set(resourceType, 0);
@@ -79,7 +72,7 @@ export class Worker extends Phaser.GameObjects.Sprite implements Phaser.GameObje
 
     private setupAnimations(): void {
         try {
-            AnimationUtils.initializeEntityAnimations(this.getThisGameObject(), 'player');
+            AnimationUtils.initializeEntityAnimations(this as any as Sprite, 'player');
             this.play(this.config.animations.idle);
         } catch (error) {
             console.warn('Worker: Could not setup animations:', error);
@@ -88,13 +81,12 @@ export class Worker extends Phaser.GameObjects.Sprite implements Phaser.GameObje
 
     private startMainLoop(): void {
         this.mainLoopTimer = this.scene.time.addEvent({
-            delay: 1000, // Vérifier toutes les secondes
+            delay: 1000,
             callback: this.updateWorker,
             callbackScope: this,
             loop: true
         });
 
-        // Premier appel immédiat
         this.scene.time.delayedCall(100, () => {
             this.updateWorker();
         });
@@ -104,7 +96,6 @@ export class Worker extends Phaser.GameObjects.Sprite implements Phaser.GameObje
         try {
             this.cleanupBlacklistPeriodically();
 
-            // Ne pas traiter si en mouvement
             if (this.isMoving) {
                 return;
             }
@@ -117,11 +108,11 @@ export class Worker extends Phaser.GameObjects.Sprite implements Phaser.GameObje
                     this.handleWaitingState();
                     break;
                 default:
-                    // Les autres états sont gérés par les timers
+                    // Gérés par les timers
                     break;
             }
         } catch (error) {
-            this.setState(WorkerState.IDLE);
+            this.setWorkerState(WorkerState.IDLE);
         }
     }
 
@@ -136,7 +127,7 @@ export class Worker extends Phaser.GameObjects.Sprite implements Phaser.GameObje
     private handleWaitingState(): void {
         if (!this.idleTimer) {
             this.idleTimer = this.scene.time.delayedCall(3000, () => {
-                this.setState(WorkerState.IDLE);
+                this.setWorkerState(WorkerState.IDLE);
                 this.idleTimer = null;
             });
         }
@@ -149,7 +140,7 @@ export class Worker extends Phaser.GameObjects.Sprite implements Phaser.GameObje
             this.currentTarget = target;
             this.moveToTarget(target, WorkerState.MOVING_TO_HARVEST);
         } else {
-            this.setState(WorkerState.WAITING);
+            this.setWorkerState(WorkerState.WAITING);
         }
     }
 
@@ -162,7 +153,7 @@ export class Worker extends Phaser.GameObjects.Sprite implements Phaser.GameObje
         } else if (this.depositPoint) {
             this.moveToPosition(this.depositPoint, WorkerState.MOVING_TO_DEPOSIT);
         } else {
-            this.setState(WorkerState.WAITING);
+            this.setWorkerState(WorkerState.WAITING);
         }
     }
 
@@ -286,7 +277,7 @@ export class Worker extends Phaser.GameObjects.Sprite implements Phaser.GameObje
     }
 
     private moveToPosition(targetPos: WorkerPosition, newState: WorkerState): void {
-        this.setState(newState);
+        this.setWorkerState(newState);
         this.isMoving = true;
 
         try {
@@ -295,10 +286,8 @@ export class Worker extends Phaser.GameObjects.Sprite implements Phaser.GameObje
             console.warn('Worker: Could not play walking animation:', error);
         }
 
-        // Mouvement physique simple
         this.scene.physics.moveTo(this.getThisGameObject(), targetPos.x, targetPos.y, this.config.moveSpeed);
 
-        // Calculer le temps de voyage et déclencher l'arrivée
         const distance = Phaser.Math.Distance.Between(this.x, this.y, targetPos.x, targetPos.y);
         const travelTime = (distance / this.config.moveSpeed) * 1000;
 
@@ -320,30 +309,26 @@ export class Worker extends Phaser.GameObjects.Sprite implements Phaser.GameObje
 
     private startHarvesting(): void {
         if (!this.currentTarget) {
-            this.setState(WorkerState.IDLE);
+            this.setWorkerState(WorkerState.IDLE);
             return;
         }
 
-        this.setState(WorkerState.HARVESTING);
+        this.setWorkerState(WorkerState.HARVESTING);
 
-        // Démarrer le cycle d'animation et de récolte
         this.harvestAnimationCycle();
     }
 
     private harvestAnimationCycle(): void {
         if (!this.currentTarget || this.state !== WorkerState.HARVESTING) {
-            this.setState(WorkerState.IDLE);
+            this.setWorkerState(WorkerState.IDLE);
             return;
         }
 
         try {
-            // Jouer l'animation de travail
             this.play(this.config.animations.working);
 
-            // Configurer un gestionnaire d'événement pour la fin de l'animation
             this.once('animationcomplete', this.onHarvestAnimationComplete, this);
         } catch (error) {
-            // En cas d'échec d'animation, utiliser un timer comme solution de secours
             this.actionTimer = this.scene.time.delayedCall(this.config.harvestSpeed, () => {
                 this.onHarvestAnimationComplete();
             });
@@ -351,13 +336,14 @@ export class Worker extends Phaser.GameObjects.Sprite implements Phaser.GameObje
     }
 
     private onHarvestAnimationComplete(): void {
-        // Effectuer un hit sur la cible
-        this.performHarvestHit();
+        this.performHarvestHit().then(() => {
+            // TODO: Redéfinir le travailleur en idle
+        });
     }
 
     private async performHarvestHit(): Promise<void> {
         if (!this.currentTarget || this.state !== WorkerState.HARVESTING) {
-            this.setState(WorkerState.IDLE);
+            this.setWorkerState(WorkerState.IDLE);
             return;
         }
 
@@ -369,48 +355,39 @@ export class Worker extends Phaser.GameObjects.Sprite implements Phaser.GameObje
                 if (typeof this.currentTarget.workerHarvest === 'function') {
                     success = await this.currentTarget.workerHarvest(this);
 
-                    // Vérifier si la cible a été détruite après ce hit
                     if (typeof this.currentTarget.isDestroyed === 'function') {
                         targetDestroyed = this.currentTarget.isDestroyed();
                     } else {
-                        // Essayer une autre approche si la fonction isDestroyed n'existe pas
                         targetDestroyed = false;
                     }
                 } else {
                     this.blacklistTarget(this.currentTarget);
                     success = false;
-                    targetDestroyed = true; // Considérer comme détruit pour passer à autre chose
+                    targetDestroyed = true;
                 }
-            } else if (this.currentTarget instanceof TiledBuilding) {
-                const harvested = this.harvestFromBuilding(this.currentTarget);
-                success = harvested;
+            } else {
+                success = this.harvestFromBuilding(this.currentTarget);
 
-                // Pour les bâtiments, on ne les détruit pas, on vérifie juste s'ils ont encore des ressources
                 targetDestroyed = !this.buildingHasResources(this.currentTarget,
                     this.config.harvestTargets.flatMap(t => t.resourceTypes));
             }
 
-            // Si l'action a échoué ou que la cible est détruite
             if (!success || targetDestroyed) {
                 if (!success) {
                     this.blacklistTarget(this.currentTarget);
                 } else {
-                    // Dans les deux cas, passer à une nouvelle cible
                     this.currentTarget = null;
                 }
 
-                this.setState(WorkerState.IDLE);
+                this.setWorkerState(WorkerState.IDLE);
                 return;
             }
 
-            // Vérifier si l'inventaire est plein
             if (this.isInventoryFull()) {
-                this.setState(WorkerState.IDLE); // Va déclencher la recherche d'un dépôt
+                this.setWorkerState(WorkerState.IDLE);
                 return;
             }
 
-            // Si on arrive ici, la cible est toujours valide et notre inventaire n'est pas plein
-            // Attendre un court délai puis recommencer le cycle d'animation
             this.scene.time.delayedCall(300, () => {
                 if (this.state === WorkerState.HARVESTING && this.currentTarget) {
                     this.harvestAnimationCycle();
@@ -422,12 +399,12 @@ export class Worker extends Phaser.GameObjects.Sprite implements Phaser.GameObje
                 this.blacklistTarget(this.currentTarget);
             }
             this.currentTarget = null;
-            this.setState(WorkerState.IDLE);
+            this.setWorkerState(WorkerState.IDLE);
         }
     }
 
     private startDepositing(): void {
-        this.setState(WorkerState.DEPOSITING);
+        this.setWorkerState(WorkerState.DEPOSITING);
 
         try {
             this.play(this.config.animations.working);
@@ -445,7 +422,6 @@ export class Worker extends Phaser.GameObjects.Sprite implements Phaser.GameObje
             if (this.currentTarget instanceof TiledBuilding) {
                 this.depositToBuilding(this.currentTarget);
             } else if (this.depositPoint) {
-                // Dépôt par défaut
                 this.depositAllResources();
             }
         } catch (error) {
@@ -460,10 +436,10 @@ export class Worker extends Phaser.GameObjects.Sprite implements Phaser.GameObje
             console.warn('Worker: Could not play idle animation:', error);
         }
 
-        this.setState(WorkerState.IDLE);
+        this.setWorkerState(WorkerState.IDLE);
     }
 
-    // === MÉTHODES D'INVENTAIRE ===
+    // #region Gestion inventaire
 
     public addToInventory(resourceType: ResourceType, amount: number): number {
         const currentAmount = this.inventory.get(resourceType) || 0;
@@ -505,6 +481,8 @@ export class Worker extends Phaser.GameObjects.Sprite implements Phaser.GameObje
     public isInventoryFull(): boolean {
         return this.getTotalInventory() >= this.config.carryCapacity;
     }
+
+    // #endregion
 
     private depositAllResources(): void {
         this.inventory.forEach((amount, resourceType) => {
@@ -571,12 +549,10 @@ export class Worker extends Phaser.GameObjects.Sprite implements Phaser.GameObje
         const entityKey = this.getEntityKey(entity);
         const isNotBlacklisted = !this.blacklistedTargets.has(entityKey);
 
-        // CORRECTION: Utiliser la méthode isAvailableForHarvest si elle existe
         let isAvailable = false;
         if (typeof entity.isAvailableForHarvest === 'function') {
             isAvailable = entity.isAvailableForHarvest(this);
         } else {
-            // Fallback si la méthode n'existe pas
             isAvailable = !(entity.isDestroyed && entity.isDestroyed());
         }
 
@@ -608,16 +584,18 @@ export class Worker extends Phaser.GameObjects.Sprite implements Phaser.GameObje
         }
     }
 
-    // === GESTION D'ÉTAT ===
+    // #region Gestion d'état
 
-    private setState(newState: WorkerState): void {
+    private setWorkerState(newState: WorkerState): void {
         if (this.state !== newState) {
-            this.state = newState;
+            this.state = newState
             this.clearTimers();
         }
     }
 
-    // === BLACKLIST ===
+    // #endregion
+
+    // #region Blacklist
 
     private blacklistTarget(target: ResourceEntity | TiledBuilding): void {
         const key = this.getEntityKey(target);
@@ -641,7 +619,9 @@ export class Worker extends Phaser.GameObjects.Sprite implements Phaser.GameObje
         }
     }
 
-    // === UTILITAIRES ===
+    // #endregion
+
+    // #region Utilitaire
 
     private clearTimers(): void {
         if (this.actionTimer) {
@@ -654,7 +634,9 @@ export class Worker extends Phaser.GameObjects.Sprite implements Phaser.GameObje
         }
     }
 
-    // === API PUBLIQUE ===
+    // #endregion
+
+    // #region Public
 
     public getConfig(): WorkerConfig {
         return this.config;
@@ -687,7 +669,7 @@ export class Worker extends Phaser.GameObjects.Sprite implements Phaser.GameObje
         this.currentTarget = null;
         this.isMoving = false;
         (this.body as Phaser.Physics.Arcade.Body)?.stop();
-        this.setState(WorkerState.IDLE);
+        this.setWorkerState(WorkerState.IDLE);
     }
 
     public destroy(): void {
@@ -700,4 +682,6 @@ export class Worker extends Phaser.GameObjects.Sprite implements Phaser.GameObje
 
         super.destroy();
     }
+
+    // #endregion
 }

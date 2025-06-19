@@ -20,10 +20,10 @@ export const gameConfig: Types.Core.GameConfig = {
     height: '100%',
     autoCenter: Phaser.Scale.CENTER_BOTH
   },
-  // Only include MainScene - all UI is now handled by Vue.js
+
   scene: [MainScene],
   backgroundColor: '#000000',
-  // Disable default input cursor since we handle it in Vue
+
   input: {
     mouse: {
       preventDefaultWheel: false,

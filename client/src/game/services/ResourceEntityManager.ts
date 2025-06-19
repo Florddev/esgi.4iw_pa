@@ -1,7 +1,9 @@
 import { Scene } from 'phaser';
+type Scene = typeof Scene;
+
 import { ResourceEntity } from '../objects/ResourceEntity';
 import { ResourceEntityRegistry } from './ResourceEntityRegistry';
-import { ResourceEntityConfig, ResourceEntitySpawnData } from '../types/ResourceEntityTypes';
+import { type ResourceEntityConfig, type ResourceEntitySpawnData } from '../types/ResourceEntityTypes';
 
 export class ResourceEntityManager {
     private readonly scene: Scene;

@@ -1,3 +1,5 @@
+import {BuildingRegistry} from "./BuildingRegistry";
+
 export { BuildingManager } from './BuildingManager'
 export { BuildingRegistry } from './BuildingRegistry'
 export { WorkerManager } from './WorkerManager'
@@ -21,10 +23,8 @@ export {
 export { ResourceEntityRegistry } from './ResourceEntityRegistry';
 export { ResourceEntityManager } from './ResourceEntityManager';
 
-// Export animation utilities
 export { AnimationUtils } from '../utils/AnimationUtils'
 
-// Types for service events
 export interface ServiceEvent<T = any> {
     readonly type: string
     readonly data: T
@@ -34,21 +34,18 @@ export interface ServiceEvent<T = any> {
 
 export type ServiceEventCallback<T = any> = (event: ServiceEvent<T>) => void
 
-// General interface for services with events
 export interface EventEmittingService {
     on(event: string, callback: ServiceEventCallback): void
     off(event: string, callback: ServiceEventCallback): void
     emit(event: string, data?: any): void
 }
 
-// Interface for services with save
 export interface PersistentService {
     saveState(): void
     loadState(): void
     clearState(): void
 }
 
-// Centralized service manager
 export class ServiceManager {
     private static instance: ServiceManager
     private readonly services = new Map<string, any>()
@@ -79,7 +76,6 @@ export class ServiceManager {
         return this.services.delete(name)
     }
 
-    // Global event bus for inter-service communication
     public on(event: string, callback: ServiceEventCallback): void {
         if (!this.eventBus.has(event)) {
             this.eventBus.set(event, new Set())
@@ -114,7 +110,6 @@ export class ServiceManager {
         }
     }
 
-    // Utility methods for global management
     public saveAllStates(): void {
         this.services.forEach((service, name) => {
             if (this.isPersistentService(service)) {
@@ -172,7 +167,6 @@ export class ServiceManager {
         return stats
     }
 
-    // Cleanup
     public destroy(): void {
         this.services.forEach((service, name) => {
             if (typeof service.destroy === 'function') {
@@ -189,7 +183,6 @@ export class ServiceManager {
     }
 }
 
-// Default service configuration
 export interface ServicesConfig {
     readonly enableResourceManager: boolean
     readonly enablePlayerInventory: boolean
@@ -212,7 +205,6 @@ export const DEFAULT_SERVICES_CONFIG: ServicesConfig = {
     autoSaveInterval: 30000 // 30 seconds
 }
 
-// Factory to initialize all services
 export class ServicesFactory {
     public static createServices(scene: Phaser.Scene, config: Partial<ServicesConfig> = {}): ServiceManager {
         const finalConfig = { ...DEFAULT_SERVICES_CONFIG, ...config }
@@ -248,7 +240,6 @@ export class ServicesFactory {
             serviceManager.registerService('dialogService', dialogService)
         }
 
-        // Configure auto-save if enabled
         if (finalConfig.autoSave) {
             scene.time.addEvent({
                 delay: finalConfig.autoSaveInterval,
@@ -268,8 +259,7 @@ export class ServicesFactory {
         entityTypes: Array<'player' | 'worker' | 'tree' | 'effects'> = ['player', 'worker', 'tree', 'effects']
     ): void {
         const animationRegistry = AnimationRegistry.getInstance()
-        
-        // Preload animations for specified entity types
+
         const animationsToLoad = new Set<AnimationType>()
         
         entityTypes.forEach(entityType => {
@@ -277,10 +267,8 @@ export class ServicesFactory {
             animations.forEach(anim => animationsToLoad.add(anim))
         })
 
-        // Register animations in the scene
         animationRegistry.registerAnimationsForScene(scene, Array.from(animationsToLoad))
 
-        // Validate textures
         const validation = animationRegistry.validateTextures(scene)
         if (!validation.isValid) {
             console.warn(`Scene ${scene.scene.key}: Missing animation textures:`, validation.missingTextures)
@@ -289,9 +277,6 @@ export class ServicesFactory {
         console.log(`Scene ${scene.scene.key}: Initialized ${animationsToLoad.size} animations`)
     }
 
-    /**
-     * Create a complete service setup for a game scene
-     */
     public static setupGameScene(scene: Phaser.Scene, config?: Partial<ServicesConfig>): {
         serviceManager: ServiceManager
         animationRegistry: AnimationRegistry
@@ -299,16 +284,13 @@ export class ServicesFactory {
         buildingRegistry: BuildingRegistry
         workerRegistry: WorkerRegistry
     } {
-        // Create all services
         const serviceManager = this.createServices(scene, config)
-        
-        // Get individual registries for convenience
+
         const animationRegistry = AnimationRegistry.getInstance()
         const resourceManager = ResourceManager.getInstance()
         const buildingRegistry = BuildingRegistry.getInstance()
         const workerRegistry = WorkerRegistry.getInstance()
 
-        // Initialize scene animations
         this.initializeSceneAnimations(scene)
 
         return {

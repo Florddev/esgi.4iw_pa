@@ -1,5 +1,7 @@
 import { Scene } from 'phaser';
-import { ResourceType, ResourceDefinition, ResourceStack } from '../types/ResourceSystemTypes';
+type Scene = typeof Scene;
+
+import { ResourceType, type ResourceDefinition, type ResourceStack } from '../types/ResourceSystemTypes';
 import { ResourceRegistry } from './ResourceRegistry';
 import { ResourceInventory } from './ResourceInventory';
 
