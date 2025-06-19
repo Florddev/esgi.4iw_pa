@@ -15,8 +15,6 @@ export class ResourceEntityManager {
     }
 
     public spawnFromMap(map: Phaser.Tilemaps.Tilemap): void {
-        console.log('ResourceEntityManager: Starting spawn from map');
-
         const configs = this.registry.getAllConfigs();
         let totalSpawned = 0;
 
@@ -24,19 +22,14 @@ export class ResourceEntityManager {
             const spawned = this.spawnEntitiesFromLayer(map, config);
             totalSpawned += spawned;
         });
-
-        console.log(`ResourceEntityManager: Spawned ${totalSpawned} entities total`);
     }
 
     private spawnEntitiesFromLayer(map: Phaser.Tilemaps.Tilemap, config: ResourceEntityConfig): number {
         const layer = map.getObjectLayer(config.layerName);
 
         if (!layer) {
-            console.warn(`ResourceEntityManager: No "${config.layerName}" object layer found in the map`);
             return 0;
         }
-
-        console.log(`ResourceEntityManager: Spawning ${config.type} from layer "${config.layerName}"`);
 
         const entities: ResourceEntity[] = [];
         let spawnedCount = 0;
@@ -77,7 +70,6 @@ export class ResourceEntityManager {
         this.entities.set(config.type, entities);
         this.entitiesByLayer.set(config.layerName, entities);
 
-        console.log(`ResourceEntityManager: Spawned ${spawnedCount} ${config.type} entities`);
         return spawnedCount;
     }
 
@@ -140,7 +132,6 @@ export class ResourceEntityManager {
             const activeEntities = entities.filter(entity => entity.scene && entity.active);
             if (activeEntities.length !== entities.length) {
                 this.entities.set(type, activeEntities);
-                console.log(`ResourceEntityManager: Cleaned up ${entities.length - activeEntities.length} destroyed ${type} entities`);
             }
         });
 
@@ -176,8 +167,6 @@ export class ResourceEntityManager {
     }
 
     public clearAll(): void {
-        console.log('ResourceEntityManager: Clearing all entities');
-
         this.entities.forEach(entities => {
             entities.forEach(entity => {
                 try {

@@ -63,14 +63,12 @@ export class ResourceEntity extends Phaser.Physics.Arcade.Sprite {
             const entity = new ResourceEntity(scene, x, y, config, spawnData);
 
             if (!entity.validateResources()) {
-                console.error('ResourceEntity: Failed validation, destroying entity');
                 entity.destroy();
                 return null;
             }
 
             return entity;
         } catch (error) {
-            console.error('ResourceEntity: Error creating entity:', error);
             return null;
         }
     }
@@ -225,8 +223,6 @@ export class ResourceEntity extends Phaser.Physics.Arcade.Sprite {
             targetTilePos.x, targetTilePos.y,
             (path: { x: number; y: number }[] | null) => {
                 if (!path) {
-                    console.log('Impossible to reach resource entity');
-                    return;
                 }
 
                 player.setPath(path);
@@ -350,8 +346,6 @@ export class ResourceEntity extends Phaser.Physics.Arcade.Sprite {
     }
 
     private dropResourcesForPlayer(): void {
-        console.log('ResourceEntity: Dropping resources for player');
-
         this.config.resources.forEach(resource => {
             if (Math.random() <= resource.chance) {
                 try {
@@ -363,8 +357,6 @@ export class ResourceEntity extends Phaser.Physics.Arcade.Sprite {
                     );
 
                     if (added > 0) {
-                        console.log(`ResourceEntity: Added ${added} ${resource.type} to player inventory`);
-
                         window.dispatchEvent(new CustomEvent('game:resourceHarvested', {
                             detail: {
                                 type: resource.type,
@@ -374,14 +366,6 @@ export class ResourceEntity extends Phaser.Physics.Arcade.Sprite {
                                 timestamp: Date.now()
                             }
                         }));
-
-                        if (process.env.NODE_ENV === 'development') {
-                            console.log('Resource drop event emitted to Vue:', {
-                                type: resource.type,
-                                amount: added,
-                                totalAfter: this.resourceManager.getResource(resource.type as ResourceType)
-                            });
-                        }
                     }
                 } catch (error) {
                     console.error(`ResourceEntity: Error adding resource ${resource.type}:`, error);
@@ -503,10 +487,6 @@ export class ResourceEntity extends Phaser.Physics.Arcade.Sprite {
             (this.state.currentHarvester === null ||
                 this.state.currentHarvester === harvester);
 
-        console.log(`ResourceEntity: Availability check for ${harvester.config?.name || 'unknown'}: ${isAvailable}`);
-        console.log(`  - destroyed: ${this.state.isDestroyed}`);
-        console.log(`  - current harvester: ${this.state.currentHarvester === harvester ? 'same worker' : 'different/none'}`);
-
         return isAvailable;
     }
 
@@ -540,11 +520,8 @@ export class ResourceEntity extends Phaser.Physics.Arcade.Sprite {
     }
 
     public async workerHarvest(worker: any): Promise<boolean> {
-        console.log(`ResourceEntity: Worker ${worker.config?.name || 'unknown'} harvest started. Health: ${this.state.currentHealth}/${this.config.health}`);
-
         // Vérifier si cette entité peut être récoltée
         if (this.state.isDestroyed) {
-            console.log(`ResourceEntity: Cannot harvest - entity is destroyed`);
             return false;
         }
 
@@ -553,7 +530,6 @@ export class ResourceEntity extends Phaser.Physics.Arcade.Sprite {
 
         // Infliger des dégâts
         this.state.currentHealth -= this.config.damagePerHit;
-        console.log(`ResourceEntity: Took ${this.config.damagePerHit} damage, health now: ${this.state.currentHealth}/${this.config.health}`);
 
         // Mettre à jour l'interface utilisateur
         this.updateHealthBar(true);
@@ -562,15 +538,12 @@ export class ResourceEntity extends Phaser.Physics.Arcade.Sprite {
         // Jouer l'animation de coup
         try {
             await this.animationHandler.action(this.config.animations.hit as AnimationType);
-            console.log(`ResourceEntity: Hit animation completed`);
         } catch (error) {
             console.error(`ResourceEntity: Error playing hit animation:`, error);
         }
 
         // Vérifier si l'entité est détruite après ce coup
         if (this.state.currentHealth <= 0) {
-            console.log(`ResourceEntity: Entity destroyed after hit`);
-
             // Jouer l'animation de destruction
             try {
                 this.animationHandler.action(this.config.animations.destroy as AnimationType);
@@ -594,49 +567,12 @@ export class ResourceEntity extends Phaser.Physics.Arcade.Sprite {
         return true;
     }
 
-    private giveResourcesToWorkerWithNotification(worker: any): void {
-        if (!worker || typeof worker.addToInventory !== 'function') {
-            console.warn('ResourceEntity: Worker does not have addToInventory method');
-            return;
-        }
-
-        console.log('ResourceEntity: Giving resources to worker');
-
-        this.config.resources.forEach(resource => {
-            if (Math.random() <= resource.chance) {
-                try {
-                    // Le worker gère son propre inventaire
-                    const added = worker.addToInventory(resource.type, resource.amount);
-
-                    if (added > 0) {
-                        console.log(`ResourceEntity: Gave ${added} ${resource.type} to worker`);
-
-                        // NOTIFICATION: Informer Vue qu'un worker a récolté (pour stats/UI)
-                        window.dispatchEvent(new CustomEvent('game:workerResourceHarvested', {
-                            detail: {
-                                workerType: worker.constructor.name.toLowerCase(),
-                                resourceType: resource.type,
-                                amount: added,
-                                entityType: this.config.type,
-                                timestamp: Date.now()
-                            }
-                        }));
-                    }
-                } catch (error) {
-                    console.error(`ResourceEntity: Error giving resource to worker:`, error);
-                }
-            }
-        });
-    }
-
     private giveResourcesToWorker(worker: any): void {
         if (!worker || typeof worker.addToInventory !== 'function') {
             console.warn('ResourceEntity: Worker does not have addToInventory method');
             return;
         }
 
-        console.log('ResourceEntity: Giving resources to worker');
-
         this.config.resources.forEach(resource => {
             if (Math.random() <= resource.chance) {
                 try {
@@ -644,9 +580,6 @@ export class ResourceEntity extends Phaser.Physics.Arcade.Sprite {
                     const added = worker.addToInventory(resource.type, resource.amount);
 
                     if (added > 0) {
-                        console.log(`ResourceEntity: Gave ${added} ${resource.type} to worker`);
-
-                        // NOTIFICATION: Informer Vue qu'un worker a récolté (pour stats/UI)
                         window.dispatchEvent(new CustomEvent('game:workerResourceHarvested', {
                             detail: {
                                 workerType: worker.constructor.name.toLowerCase(),
@@ -663,7 +596,6 @@ export class ResourceEntity extends Phaser.Physics.Arcade.Sprite {
             }
         });
     }
-
 
     public getResourceNames(): string[] {
         try {

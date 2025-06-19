@@ -65,24 +65,16 @@ export const useGameStore = defineStore('game', () => {
     try {
       // NOUVEAU: Setup listener pour les changements ResourceManager
       resourceManager.getGlobalInventory().on('change', (event: any) => {
-        console.log('ResourceManager change detected:', event.type, event.newAmount);
 
-        // Mettre à jour la Map réactive Vue
         resourcesMap.value.set(event.type, event.newAmount);
-
-        // IMPORTANT: Forcer la réactivité Vue en créant une nouvelle Map
         resourcesMap.value = new Map(resourcesMap.value);
-
-        // Trigger supplémentaire pour les computed qui en dépendent
         resourceUpdateTrigger.value++;
 
-        // Notifier Vue dans nextTick pour s'assurer de la réactivité
         nextTick(() => {
           console.log('Vue reactivity updated for resource:', event.type, event.newAmount);
         });
       });
 
-      // Synchronisation initiale
       syncResourcesFromManager();
 
       console.log('Resource sync initialized successfully');
@@ -98,55 +90,43 @@ export const useGameStore = defineStore('game', () => {
       const allResources = resourceManager.getGlobalInventory().getAllResources();
       resourcesMap.value = new Map(allResources);
       resourceUpdateTrigger.value++;
-
-      console.log('Resources synced from manager:', Object.fromEntries(resourcesMap.value));
     } catch (error) {
       console.error('Error syncing resources from manager:', error);
     }
   };
 
-  // NOUVEAU: Méthode pour forcer la mise à jour des ressources
   const forceResourceUpdate = () => {
     if (!resourceManager) return;
 
     try {
       syncResourcesFromManager();
-      console.log('Forced resource update completed');
     } catch (error) {
       console.error('Error forcing resource update:', error);
     }
   };
 
-  // Getters (computed) - AMÉLIORÉS pour la réactivité
   const isGameReady = computed(() => state.value.isGameLoaded);
 
-  // AMÉLIORÉ: Liste des ressources réactive
   const resourceList = computed((): ResourceStack[] => {
-    // Dépendre du trigger pour forcer la réactivité
     resourceUpdateTrigger.value;
 
     if (!resourceManager) return [];
 
     try {
-      const resources = resourceManager.getGlobalInventory().getNonZeroResources();
-      console.log('Computed resourceList updated:', resources.length, 'resources');
-      return resources;
+      return resourceManager.getGlobalInventory().getNonZeroResources();
     } catch (error) {
       console.error('Error getting resource list:', error);
       return [];
     }
   });
 
-  // AMÉLIORÉ: Total des ressources réactif
   const totalResources = computed(() => {
-    resourceUpdateTrigger.value; // Force reactivity
+    resourceUpdateTrigger.value;
 
     if (!resourceManager) return 0;
 
     try {
-      const total = resourceManager.getGlobalInventory().getTotalItems();
-      console.log('Computed totalResources updated:', total);
-      return total;
+      return resourceManager.getGlobalInventory().getTotalItems();
     } catch (error) {
       console.error('Error getting total resources:', error);
       return 0;
@@ -156,9 +136,7 @@ export const useGameStore = defineStore('game', () => {
   const buildingCount = computed(() => state.value.buildings.length);
   const workerCount = computed(() => state.value.workers.length);
 
-  // AMÉLIORÉ: canAffordBuilding réactif
   const canAffordBuilding = computed(() => (buildingType: string, cost?: Record<string, number>) => {
-    // Forcer la dépendance au trigger de ressources
     resourceUpdateTrigger.value;
 
     if (!initializeManagers() || !resourceManager || !buildingRegistry) {
@@ -173,13 +151,9 @@ export const useGameStore = defineStore('game', () => {
             typedCost[resource as ResourceType] = amount;
           }
         });
-        const canAfford = resourceManager.canAfford(typedCost);
-        console.log(`Can afford ${buildingType} (custom cost):`, canAfford);
-        return canAfford;
+        return resourceManager.canAfford(typedCost);
       } else {
-        const canAfford = buildingRegistry.canAffordBuilding(buildingType);
-        console.log(`Can afford ${buildingType} (registry):`, canAfford);
-        return canAfford;
+        return buildingRegistry.canAffordBuilding(buildingType);
       }
     } catch (error) {
       console.error('Error checking if can afford building:', error);
@@ -187,15 +161,13 @@ export const useGameStore = defineStore('game', () => {
     }
   });
 
-  // NOUVEAU: Computed pour obtenir une ressource spécifique
   const getResourceAmount = computed(() => (type: ResourceType): number => {
-    resourceUpdateTrigger.value; // Force reactivity
+    resourceUpdateTrigger.value;
 
     if (!resourceManager) return 0;
 
     try {
-      const amount = resourceManager.getResource(type);
-      return amount;
+      return resourceManager.getResource(type);
     } catch (error) {
       console.error(`Error getting resource ${type}:`, error);
       return 0;
@@ -267,9 +239,7 @@ export const useGameStore = defineStore('game', () => {
       return 0;
     }
     try {
-      const added = resourceManager.addResource(type, amount, 'game_store');
-      // La réactivité se déclenche automatiquement via les événements
-      return added;
+      return resourceManager.addResource(type, amount, 'game_store');
     } catch (error) {
       console.error('Error adding resource:', error);
       return 0;
@@ -282,9 +252,7 @@ export const useGameStore = defineStore('game', () => {
       return 0;
     }
     try {
-      const removed = resourceManager.removeResource(type, amount, 'game_store');
-      // La réactivité se déclenche automatiquement via les événements
-      return removed;
+      return resourceManager.removeResource(type, amount, 'game_store');
     } catch (error) {
       console.error('Error removing resource:', error);
       return 0;
@@ -308,7 +276,6 @@ export const useGameStore = defineStore('game', () => {
       const success = buildingRegistry.deductBuildingCost(buildingType, 'building_purchase');
       if (success) {
         console.log(`Successfully purchased building: ${buildingType}`);
-        // La réactivité se déclenche automatiquement
       }
       return success;
     } catch (error) {
@@ -396,7 +363,7 @@ export const useGameStore = defineStore('game', () => {
     resourceUpdateTrigger.value++;
   };
 
-  // NOUVEAU: Watcher pour debug
+  /*
   if (process.env.NODE_ENV === 'development') {
     watch(resourceUpdateTrigger, (newVal) => {
       console.log('Resource update trigger changed:', newVal);
@@ -406,6 +373,7 @@ export const useGameStore = defineStore('game', () => {
       console.log('Resources map updated:', Object.fromEntries(newMap));
     }, { deep: true });
   }
+  */
 
   return {
     // State

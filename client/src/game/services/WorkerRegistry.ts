@@ -33,8 +33,6 @@ export class WorkerRegistry {
             new Worker(scene, x, y, config, depositPoint)
       });
     });
-
-    console.log(`WorkerRegistry: Initialized ${this.workers.size} worker types`);
   }
 
   public getWorkerConfig(type: WorkerType): WorkerConfig | undefined {
@@ -44,15 +42,12 @@ export class WorkerRegistry {
   public createWorker(type: WorkerType, scene: Scene, x: number, y: number, depositPoint?: WorkerPosition): Worker | null {
     const definition = this.workers.get(type);
     if (!definition) {
-      console.error(`WorkerRegistry: Unknown worker type: ${type}`);
       return null;
     }
 
     try {
-      console.log(`WorkerRegistry: Creating worker ${type} at (${x}, ${y})`);
       return definition.createInstance(scene, x, y, depositPoint);
     } catch (error) {
-      console.error(`WorkerRegistry: Error creating worker ${type}:`, error);
       return null;
     }
   }

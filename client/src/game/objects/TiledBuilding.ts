@@ -386,13 +386,10 @@ export class TiledBuilding {
     }
 
     private onPlayerEnter(player: Phaser.Physics.Arcade.Sprite): void {
-        console.log(`Player entered ${this.buildingType}`);
         this.lastPlayerPosition = { x: player.x, y: player.y };
     }
     
     private onPlayerExit(): void {
-        console.log(`Player exited ${this.buildingType}`);
-        
         this.scene.time.delayedCall(200, () => {
             if (!this.isPlayerStillInside()) {
                 this.cleanupPlayerInteraction();
@@ -460,7 +457,6 @@ export class TiledBuilding {
         }
     
         this.lastInteractionTime = currentTime;
-        console.log(`Opening interface for ${this.buildingType}`);
         
         // Émettre un événement pour Vue.js au lieu d'utiliser l'ancien système Phaser
         window.dispatchEvent(new CustomEvent('game:buildingInfo', {

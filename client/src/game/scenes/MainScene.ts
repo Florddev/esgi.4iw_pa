@@ -1113,7 +1113,6 @@ export class MainScene extends Scene {
   public forceSyncWithVue(): void {
     try {
       this.triggerInitialResourceSync();
-      console.log('Forced sync with Vue completed');
     } catch (error) {
       console.error('Error forcing sync with Vue:', error);
     }

@@ -5,22 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="352ec0bd-8df2-47e0-b707-7082ddcb4a7c" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.flatignore" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/public/assets/maps/map.json" beforeDir="false" afterPath="$PROJECT_DIR$/client/public/assets/maps/map.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/configs/ResourceConfigs.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/configs/ResourceConfigs.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/configs/ResourceEntityConfigs.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/configs/ResourceEntityConfigs.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/configs/WorkerConfigs.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/configs/WorkerConfigs.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/objects/Player.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/objects/Player.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/game/objects/ResourceEntity.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/objects/ResourceEntity.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/game/objects/TiledBuilding.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/objects/TiledBuilding.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/objects/workers/Worker.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/objects/workers/Worker.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/objects/workers/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/objects/workers/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/objects/workers/Worker.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/objects/workers/Worker.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/game/scenes/MainScene.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/scenes/MainScene.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/services/AnimationRegistry.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/services/AnimationRegistry.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/services/ResourceEntityManager.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/services/ResourceEntityManager.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/game/services/WorkerRegistry.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/services/WorkerRegistry.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/types/ResourceEntityTypes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/types/ResourceEntityTypes.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/game/types/ResourceSystemTypes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/types/ResourceSystemTypes.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/game/utils/AnimationUtils.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/game/utils/AnimationUtils.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/stores/gameStore.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/stores/gameStore.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -91,7 +83,7 @@
       <workItem from="1750062451478" duration="10628000" />
       <workItem from="1750266099772" duration="221000" />
       <workItem from="1750267885323" duration="1505000" />
-      <workItem from="1750317793283" duration="290000" />
+      <workItem from="1750317793283" duration="2671000" />
     </task>
     <servers />
   </component>

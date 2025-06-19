@@ -197,12 +197,6 @@ export class AnimationUtils {
    */
   public static logAnimationStats(): void {
     const stats = this.registry.getAnimationStats()
-    console.group('Animation Registry Stats')
-    console.log(`Total animations: ${stats.totalAnimations}`)
-    console.log(`Registered animations: ${stats.registeredAnimations}`)
-    console.log('Animations by texture:', stats.animationsByTexture)
-    console.log('Usage stats:', stats.usageStats)
-    console.groupEnd()
   }
 
   /**
